@@ -36,7 +36,7 @@ export async function run(argv, deps) {
   if (!args.files.length) { out(USAGE); return 2; }
   const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
   const seen = new Map();
-  let checked = 0, contradicted = 0, unplaced = 0, failure = null;
+  let checked = 0, contradicted = 0, looks = 0, unplaced = 0, failure = null;
 
   for (const file of args.files) {
     let text;
@@ -62,9 +62,13 @@ export async function run(argv, deps) {
         continue;
       }
       checked++;
-      if (r.verdict === 'contradicted') {
+      const when = real.at ? ` ${real.at.slice(0, 10)}` : '';
+      if (r.verdict === 'look') {
+        looks++;
+        out(`${file}:${claim.line}  look: waits on ${name(ref)}, which is ${real.state}${when}  ${real.url}`);
+        out(`  "${claim.quote}"`);
+      } else if (r.verdict === 'contradicted') {
         contradicted++;
-        const when = real.at ? ` ${real.at.slice(0, 10)}` : '';
         out(`${file}:${claim.line}  said ${claim.said}, but ${name(ref)} is ${real.state}${when}  ${real.url}`);
         out(`  "${claim.quote}"`);
       }
@@ -78,7 +82,7 @@ export async function run(argv, deps) {
     return contradicted ? 1 : 2;
   }
   if (!checked && !unplaced) { out('no claims about PR or issue state found'); return 0; }
-  const note = unplaced ? `, ${unplaced} not checked` : '';
+  const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');
   out(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
   return contradicted ? 1 : 0;
 }

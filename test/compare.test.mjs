@@ -26,3 +26,10 @@ test('said merged of an issue: closed issue is fine, it cannot merge', () => {
 test('unknown state: unknown, never a contradiction', () => {
   assert.equal(compare(claim('open'), null).verdict, 'unknown');
 });
+test('waiting on something merged or closed: a look, never a contradiction', () => {
+  assert.equal(compare(claim('waiting'), real('merged')).verdict, 'look');
+  assert.equal(compare(claim('waiting'), real('closed')).verdict, 'look');
+});
+test('waiting on something open: fine', () => {
+  assert.equal(compare(claim('waiting'), real('open')).verdict, 'ok');
+});

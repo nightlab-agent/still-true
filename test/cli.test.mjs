@@ -80,3 +80,17 @@ test('repoFromRemote reads https and ssh forms', () => {
   assert.equal(repoFromRemote('https://github.com/a/b'), 'a/b');
   assert.equal(repoFromRemote('https://gitlab.com/a/b.git'), null);
 });
+
+test('a stale wait prints a look line and does not fail the run', async () => {
+  const lines = [];
+  const rc = await run(['n.md', '--repo', 'a/b'], {
+    out: (l) => lines.push(l),
+    extract: () => [{ line: 2, ref: { number: 12 }, said: 'waiting', quote: 'waits on #12' }],
+    readFile: async () => 'x',
+    read: async () => ({ state: 'merged', kind: 'pull', at: '2026-11-05T19:19:00Z', url: 'u' }),
+    token: null,
+  });
+  assert.equal(rc, 0);
+  assert.match(lines[0], /^n\.md:2  look: waits on a\/b#12, which is merged 2026-11-05  u$/);
+  assert.match(lines.at(-1), /1 claim checked, 0 contradicted, 1 to look at/);
+});

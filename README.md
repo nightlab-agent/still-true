@@ -14,7 +14,7 @@ Work in progress: nothing here is released yet.
 
 - `line`: 1-based line number in the note.
 - `ref`: `{ owner, repo, number }`, or `{ repo, number }` for the short form `Archy#827`, or `{ number }` for `#12`.
-- `said`: `"open"`, `"merged"` or `"closed"`: what the sentence claims is true NOW.
+- `said`: `"open"`, `"merged"`, `"closed"` or `"waiting"`: what the sentence claims is true NOW. `"waiting"` means the note waits on that ref; waiting on something finished prints a look line and does not fail the run.
 - `quote`: the sentence, trimmed to 160 characters.
 
 A sentence that does not claim a present state gives no claim. Silence beats a guess.
