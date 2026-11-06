@@ -147,3 +147,12 @@ test('--help prints the usage and an unknown flag is refused, never read as a fi
   assert.equal(odd.rc, 2);
   assert.match(odd.lines.join('\n'), /unknown option --nope/);
 });
+
+test('--help says what each exit code means, so a script need not open the README', async () => {
+  const { out, o } = io();
+  assert.equal(await run(['--help'], { ...base, out }), 0);
+  const help = o.join('\n');
+  assert.match(help, /^exit 0: nothing contradicted/m);
+  assert.match(help, /^exit 1: at least one contradiction/m);
+  assert.match(help, /^exit 2: bad usage, or .*not complete/m);
+});

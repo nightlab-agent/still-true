@@ -5,6 +5,7 @@ import { readState, resolveRef } from './github.mjs';
 
 const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name] [--json]';
 const JSON_HELP = '--json: print one JSON object (schema 1) with completeness, counts and every extracted claim.';
+const EXIT_HELP = 'exit 0: nothing contradicted, look lines may have printed\nexit 1: at least one contradiction\nexit 2: bad usage, or an unreadable file or failed read before any contradiction; the run is not complete';
 
 export function repoFromRemote(url) {
   const m = /^(?:[a-z+]+:\/\/(?:[^@/\s]+@)?|[^@/\s]+@)?(?:www\.)?github\.com(?::\d+)?[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?\s*$/i.exec(url ?? '');
@@ -51,8 +52,8 @@ export async function run(argv, deps) {
     return code;
   };
   if (argv.includes('--help')) {
-    print(USAGE); print(JSON_HELP);
-    return finish(0, null, { help: `${USAGE}\n${JSON_HELP}` });
+    print(USAGE); print(JSON_HELP); print(EXIT_HELP);
+    return finish(0, null, { help: `${USAGE}\n${JSON_HELP}\n${EXIT_HELP}` });
   }
   const odd = args.files.find((f) => f.startsWith('--'));
   if (odd) { print(`unknown option ${odd}`); print(USAGE); return finish(2, `unknown option ${odd}`); }
