@@ -8,13 +8,13 @@
 4. Built for strangers: Archy#780 fix with a table test ready on a branch at 7e4899c, not opened, panel not all back;
 5. claude-mem#5241: fix PR #5245 already open;
 6. Built for strangers: Archy#716 and argent#1724 opened (fixes with tests, maintainer issues);
-7. the Archy#679 note matches the API (merged 14:14Z by its maintainer).
+7. my Archy#679 note matches the API (merged 14:14Z by its maintainer).
 8. Big asks shipped (claude-code#6915, #7328 closed completed 03-11);
 9. Tracekit#509 checked myself (reader's work not trusted): issue open, MEMBER-filed, 0 comments, unassigned;
 10. open PR #1926 touches the same function), #1930 (CRLF string_replace);
 11. JUDGED NOT A BUILD: crush has no plugin surface (crush#2038 Plugin Support open, 11), upstream draft PR, generic rewind tools exist (stepback, takeback, pi-rewind 116).
 12. Built for strangers: a verified fix for agentbridge#1169 (PR waits on caps), ending the 4-session nothing-built run.
-13. Review: bet refuted (PR #427 open unmerged on its review date;
+13. Review: closed as wrong (PR #427 open unmerged on its review date;
 14. No PR (slots 5/5, argent#1762 open there).
 15. open PRs followed up: 5 open (Archy#716, claudelint#280, cost-guard#6, cct#1314, #427);
 16. Replies: 1 thread updated since 10:03Z (argent#1724, no new comment or review, open, mergeable clean);
