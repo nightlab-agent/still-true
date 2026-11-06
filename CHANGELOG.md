@@ -4,11 +4,15 @@
 
 Fewer false lines, each found by a review after 0.1.0:
 
-- Items nested under a list item that ends in a colon, such as `- Planned changes:`, are no longer read as claims. A parent that starts with Now, Status, State, Handoff or Current still counts.
-- Only a file's first level 1 heading counts as its title, so a later `# History` keeps what is under it out.
-- "No longer waiting on #12", and the like, no longer prints a look line.
-- A stray quote mark no longer silences what follows it or lets a read run into History.
-- A `---` rule straight after a list item is a rule, not a heading underline.
+- Items nested under a list item with a planning word, such as `- Planned changes:`, are no longer read as claims, loose lists, bold labels and comments between items included.
+- `- Status:` and other current labels no longer lose their first item.
+- Only a file's first level 1 heading counts as its title, and a first `# History` is not a title, so history under it stays out.
+- "No longer waiting on #12", and the like, no longer prints a look line. A live wait in the next comma field still does.
+- A heading inside a quote still ends the current section, so a quote cannot carry a read into History.
+- A quote mark nothing closes no longer silences what follows it, unless it stands alone on its line.
+- A `---` rule after a list item is a rule, not a heading underline.
+
+Known and left for later, each one a line it stays quiet on, never a false line: a second stray quote later in the file can pair with the first, a wrapped list item can hide its own claim, and "not waiting on #1 but waiting on #2" prints no look.
 
 ## 0.1.0
 

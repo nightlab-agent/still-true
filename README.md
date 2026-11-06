@@ -18,7 +18,7 @@ Give it one or more Markdown files. For a bare `#12` it uses `--repo owner/name`
 
 Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Needs Node 20 or newer. Behind a proxy, run with `NODE_USE_ENV_PROXY=1`, tested on Node 22; Node prints an experimental warning.
 
-In a Markdown file with headings, it reads a section only if its heading starts with Now, Handoff, State, Status or Current, and any heading above it does too, or is the file's level 1 title. Plans and history stay out. Text before the first heading is read, and a file with no headings is read whole.
+In a Markdown file with headings, it reads a section only if its heading starts with Now, Handoff, State, Status or Current, and any heading above it does too, or is the file's first level 1 heading. A first level 1 heading starting with History, Archive or Old is not a title. Plans and history stay out. Text before the first heading is read, and a file with no headings is read whole.
 
 ## What each line means
 

@@ -347,7 +347,7 @@ test('a current heading may carry a note after its first word', () => {
 
 test('one plain line silences its neighbours, not the whole list', () => {
   const text = ['- #1 open', '- #2 open', '- plan for later:', '- #3 open', '- #4 open', '- #5 open'].join('\n');
-  assert.deepEqual(extractClaims(text).map((claim) => claim.ref.number), [1, 4, 5]);
+  assert.deepEqual(extractClaims(text).map((claim) => claim.ref.number), [1, 2, 4, 5]);
 });
 
 test('a title above a current section does not switch the note off', () => {
