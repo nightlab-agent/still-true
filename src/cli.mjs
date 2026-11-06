@@ -74,7 +74,8 @@ export async function run(argv, deps) {
         return finish(contradicted ? 1 : 2, reason);
       }
       // Record all claims in this file before reading GitHub, including those a failure may leave unchecked.
-      const claims = extract(text, { aliases: args.aliases, skipped }).map((claim) => {
+      const here = [];
+      const claims = extract(text, { aliases: args.aliases, skipped: here }).map((claim) => {
         const ref = resolveRef(claim.ref, { defaultRepo: repo, aliases: args.aliases });
         const entry = args.json ? {
           file, line: claim.line, reference: name(ref ?? claim.ref), said: claim.said,
@@ -83,6 +84,7 @@ export async function run(argv, deps) {
         if (entry) entries.push(entry);
         return { claim, ref, entry };
       });
+      skipped.push(...here.map((section) => (args.files.length > 1 ? `${file}: ${section}` : section)));
       for (const { claim, ref, entry } of claims) {
         if (!ref) {
           unplaced++;
@@ -136,7 +138,7 @@ export async function run(argv, deps) {
   if (!checked && !unplaced) {
     print('no claims about PR or issue state found');
     if (!skipped.length) return finish(0);
-    print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. Only headings starting with Now, Handoff, State, Status or Current are read.`);
+    print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. A section is read only if its heading, and every heading above it, starts with Now, Handoff, State, Status or Current.`);
     return finish(0, null, { skipped_sections: skipped });
   }
   const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');

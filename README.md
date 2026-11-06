@@ -1,8 +1,15 @@
 # still-true
 
+Checks a handoff note's pull request and issue claims against GitHub.
+
 Your handoff note says "waiting on #12". #12 merged yesterday. The next session plans around it anyway.
 
-    npx @nightlab-agent/still-true STATE.md --repo owner/name --alias Archy=hslee16/Archy
+    npx @nightlab-agent/still-true STATE.md --repo owner/name
+
+Use your own note and repository. Try it first on a note that is out of date:
+
+    printf '# Now\n\nhslee16/Archy#827 open\n' > note.md
+    npx @nightlab-agent/still-true note.md
 
 Every option and exit code:
 
@@ -10,11 +17,13 @@ Every option and exit code:
 
 `still-true` reads a note, finds the sentences that say a pull request or issue is open, merged, closed or being waited on, and asks GitHub. It also checks references named as queued review work. It prints contradictions and things to look at:
 
-    STATE.md:5  said open, but hslee16/Archy#827 is merged 2026-11-05  https://github.com/hslee16/Archy/pull/827
+    note.md:3  said open, but hslee16/Archy#827 is merged 2026-11-05  https://github.com/hslee16/Archy/pull/827
       "hslee16/Archy#827 open"
-    2 claims checked, 1 contradicted
+    1 claim checked, 1 contradicted
 
-We typed that note to test it. The real miss behind it: an agent's handoff went on counting 5 open pull requests through twelve session ends after one had merged. A bare count names no pull request, so still-true needs the note to name it.
+A note with something to look at adds `, 1 to look at` to the last line.
+
+The real miss behind it: an agent's handoff went on counting 5 open pull requests through twelve session ends after one had merged. A bare count names no pull request, so still-true needs the note to name it.
 
 ## Use it
 
@@ -54,9 +63,14 @@ Add `--json` for one JSON object on stdout, with no text lines. Exit codes stay 
 The object has `schema: 1`, `complete`, `reason` (`null` on success), `counts` and `claims`.
 Counts are `checked`, `contradicted`, `looks` and `notChecked`; checked includes contradictions, looks and ok claims.
 Each claim has `file`, a 1-based `line`, `reference` (resolved to `owner/repo#number` when possible), `said`, `actual` (`open`, `merged`, `closed` or `null` when unknown), `kind` (`contradiction`, `look`, `not checked` or `ok`), and `url` when known.
+If no claim was found and a section was skipped, `skipped_sections` lists those sections, each with its file when you gave more than one. `complete` is still `true` and the exit is `0`, so a script that must know a note was really read should check `counts.checked` too.
 `said` can also be `queued`, for the review obligations above. A nonempty GitHub `state_reason` is included as an optional string field; null or absent reasons are omitted.
 
 A failed read or unreadable file sets `complete: false` and gives the reason, keeping earlier results. The run stops there; claims already extracted from the current file that were not reached have kind `not checked`. Later files have no entries. A complete run can still have unchecked claims, such as an unresolved alias or a private issue. No claims gives an empty array and zero counts. `--json --help` returns the help text in a `help` field.
+
+## Remove it
+
+`npx` installs nothing in your project; it keeps a copy in npm's cache (`~/.npm/_npx`), which `npm cache clean --force` clears with the rest of the cache. If you installed it with `npm install`, use `npm uninstall @nightlab-agent/still-true`. It writes no files of its own.
 
 ## When it is not for you
 
@@ -67,7 +81,7 @@ A failed read or unreadable file sets `complete: false` and gives the reason, ke
 
 ## How well it reads
 
-An earlier parser scored 0 of 17 on hand-labelled sentences it had not seen. Rewritten against 40 other labelled claims, it found 16 of the same 17, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
+On 17 hand-labelled sentences kept out of its 40 development claims, it found 16, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
 
 The queued-review extension finds the reported subject and preserves its dependency. In `test/fixtures`, the development handoff scores 13/13 required claims with 0 extras. The second handoff, held out from development of this extension, retains 28/28 required claims plus 2 permitted optional claims, with 0 extras. It has no counted review obligations: two separately labelled current-work references (a fix ready on a branch and fixes waiting on a date) still go unread, so new-work recall there is 0/2. This supports keeping the rule narrow, not treating every named reference as current work. `node test/score-queued.mjs` reproduces that supplemental score; checking every uncovered mention instead adds 22 unlabelled references in the first handoff and 12 in the second. These are small samples of the same author's notes, not evidence of recall on other writers.
 

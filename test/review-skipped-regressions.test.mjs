@@ -22,7 +22,7 @@ test('a multiline setext heading reports its whole name', async () => {
   assert.deepEqual(JSON.parse(result.lines.join('')).skipped_sections, ['Next steps']);
   assert.deepEqual((await go(text)).lines, [
     'no claims about PR or issue state found',
-    'skipped 1 section: Next steps. Only headings starting with Now, Handoff, State, Status or Current are read.',
+    'skipped 1 section: Next steps. A section is read only if its heading, and every heading above it, starts with Now, Handoff, State, Status or Current.',
   ]);
 });
 test('control: a single-line setext heading reports its name', async () => {
@@ -83,12 +83,12 @@ test('mixed files report no skipped sections when any file supplies a claim', as
     assert.equal('skipped_sections' in report, false);
   }
 });
-test('control: files with no claims aggregate their skipped section names', async () => {
+test('control: files with no claims aggregate their skipped sections, each with its file', async () => {
   const notes = { 'next.md': '## Next\n\n#1 open\n', 'later.md': '## Later\n\n#2 open\n' };
   const plain = await files(notes, []);
   assert.equal(plain.code, 0);
-  assert.match(plain.lines[1], /^skipped 2 sections: Next, Later\./);
+  assert.match(plain.lines[1], /^skipped 2 sections: next\.md: Next, later\.md: Later\./);
   const json = await files(notes, ['--json']);
   assert.equal(json.code, 0);
-  assert.deepEqual(JSON.parse(json.lines.join('')).skipped_sections, ['Next', 'Later']);
+  assert.deepEqual(JSON.parse(json.lines.join('')).skipped_sections, ['next.md: Next', 'later.md: Later']);
 });

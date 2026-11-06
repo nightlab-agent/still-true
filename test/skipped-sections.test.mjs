@@ -35,3 +35,28 @@ test('a readable section under the file title is not called skipped', async () =
   const { lines } = await exec('# Project\n## Now\nAll quiet.\n## Next\n- #1 is open\n');
   assert.match(lines[1], /skipped 2 sections: Project, Next\./);
 });
+
+test('the skip line names the rule for headings above a section', async () => {
+  const { lines } = await exec('## Project\n\n### Status\n\nAll fine.\n');
+  assert.match(lines[1], /skipped 2 sections: Project, Status\./);
+  assert.match(lines[1], /and every heading above it/);
+});
+test('control: the rule is in the line for a single flat section too', async () => {
+  const { lines } = await exec('## Next\n- #1 is open\n');
+  assert.equal(lines[1], 'skipped 1 section: Next. A section is read only if its heading, and every heading above it, starts with Now, Handoff, State, Status or Current.');
+});
+test('two files: each skipped section names its file', async () => {
+  const texts = { 'a.md': '## Next\n- #1 is open\n', 'b.md': '## Later\n- #2 is open\n' };
+  const lines = [];
+  await run(['a.md', 'b.md', '--repo', 'o/r'], { out: (l) => lines.push(l), extract: extractClaims, readFile: async (f) => texts[f], read: async () => ({ state: 'open' }) });
+  assert.match(lines[1], /skipped 2 sections: a\.md: Next, b\.md: Later\./);
+});
+test('two files, --json: each skipped section names its file', async () => {
+  const lines = [];
+  await run(['a.md', 'b.md', '--repo', 'o/r', '--json'], { out: (l) => lines.push(l), extract: extractClaims, readFile: async () => '## Next\n', read: async () => ({ state: 'open' }) });
+  assert.deepEqual(JSON.parse(lines.join('')).skipped_sections, ['a.md: Next', 'b.md: Next']);
+});
+test('the README lists skipped_sections', async () => {
+  const { readFile } = await import('node:fs/promises');
+  assert.match(await readFile('README.md', 'utf8'), /`skipped_sections`/);
+});

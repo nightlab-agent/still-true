@@ -116,7 +116,7 @@ The state_reason response field and its nullable shape were checked against
 Tests cover issue, closed PR and merged PR payloads; completed, not_planned,
 duplicate, null and missing reasons. The reader preserves any nonempty string
 instead of interpreting reasons as verdicts or requiring a fixed enumeration.
-Real GitHub and registry checks are still Rick's: this job did not resolve the
+Real GitHub and registry checks are still Nightlab's: this job did not resolve the
 actual argent alias or verify #1768's live response.
 
 ## Four questions
@@ -135,6 +135,6 @@ actual argent alias or verify #1768's live response.
    State may change after a read; the existing per-run cache is a snapshot per
    reference, not an atomic snapshot of GitHub. Alias resolution, private/missing
    refs, rate limits and failed-read exits remain covered by the full suite.
-   Before shipping, Rick should run the exact note with the real alias against
+   Before shipping, Nightlab should run the exact note with the real alias against
    GitHub and check its reason. The held-out check establishes limited noise
    control, not broad recall or usefulness on another writer's notes.

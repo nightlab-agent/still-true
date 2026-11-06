@@ -302,12 +302,12 @@ test('quotation and comment blocks remain nonclaims across blank lines', () => {
     assert.deepEqual(extractClaims(text), [c(7, { number: 13 }, 'merged', '#13 is merged.')], open);
     assert.deepEqual(extractClaims(`${open}\n\n#12 is open.`), [], open);
   }
-  assert.deepEqual(extractClaims("Rick's note\n\n#12 open"), [c(3, { number: 12 }, 'open', '#12 open')]);
-  assert.deepEqual(extractClaims("'Rick's old note\n\n#12 open\n\n'"), []);
-  assert.deepEqual(extractClaims('‘Rick’s old note\n\n#12 open\n\n’'), []);
+  assert.deepEqual(extractClaims("Sam's note\n\n#12 open"), [c(3, { number: 12 }, 'open', '#12 open')]);
+  assert.deepEqual(extractClaims("'Sam's old note\n\n#12 open\n\n'"), []);
+  assert.deepEqual(extractClaims('‘Sam’s old note\n\n#12 open\n\n’'), []);
 });
 
-// Actual handoff excerpts supplied on Rick's board. These are not a STATE fixture.
+// Actual handoff excerpts supplied by hand. These are not a STATE fixture.
 test('supplied real board excerpts distinguish quoted assumptions, merge reports and nonstates', () => {
   const samples = [
     "Expired assumption: 'Archy#827 open' and with it 'open 5/5' and 'next slot'.",
