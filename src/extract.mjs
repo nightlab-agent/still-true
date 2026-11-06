@@ -9,7 +9,7 @@ const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|
 const LABEL_LIST = new RegExp(`(?:^|:\\s*)(open|merged|closed)(?:\\s+(?:PRs|issues|pull requests))?:\\s*(${TOKEN}(?:\\s*(?:,|and)\\s*${TOKEN})*)$`, 'i');
 
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
-const PLANNED = /\b(?:plans?|planned|planning|proposed|intended|expected|ideas?|goals?|draft|to-?dos?|next|later|someday|old|previous|history|example)\b/i;
+const PLANNED = /\b(?:plans?|planned|planning|proposed|intended|expected|ideas?|goals?|draft|to[- ]?dos?|next|later|someday|old|previous|history|example)\b/i;
 const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
 const PREAMBLE = /^(?:if|unless|once|after|when|until|yesterday|old note|example|suppose|imagine)\b/i;
 const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|when|until|need|get|think|believe|locally|re-?opened)\b|\bonce\s+(?!at\b)\S|n['’]t\b|\bby\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|next)\b/i;
@@ -95,9 +95,12 @@ function unquoted(raw) {
   return result;
 }
 
+// "#12 open, thank once on merge": once mid-field in a later comma field belongs to that step, not to the state before it.
+const LATER_STEP_ONCE = /,\s*[^,]*?\S\s+once\s[^,]*/g;
+
 function claimsFromClause(quote, line) {
   const body = unquoted(quote);
-  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body) || NONSTATE.test(body)) return [];
+  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, '')) || NONSTATE.test(body)) return [];
   const claims = [];
   const add = (tokens, said) => {
     for (const token of tokens) {
@@ -218,7 +221,7 @@ export function extractClaims(text, _options = {}) {
   };
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
-  for (const [index, raw] of lines.entries()) {
+  for (let [index, raw] of lines.entries()) {
     if (index === 0 && /^---\s*$/.test(raw)) {
       frontMatter = true;
       continue;
@@ -232,6 +235,8 @@ export function extractClaims(text, _options = {}) {
       if (close && close[1][0] === fence[0] && close[1].length >= fence.length) fence = null;
       continue;
     }
+    // A comment closed on its own line leaves the text around it, so it cannot cost a planning item its scope.
+    if (!comment) raw = raw.replace(/<!--.*?-->/g, '');
     if (comment || raw.includes('<!--')) {
       comment = !raw.includes('-->') || raw.lastIndexOf('<!--') > raw.lastIndexOf('-->');
       paragraph.push({ claims: [], list: false, indent: Infinity });
