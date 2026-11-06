@@ -1,5 +1,9 @@
 # 0.1.2 release review
 
+Historical review below. F1/F2 regressions now live in
+`test/review-release-0.1.2.test.mjs`; the review-folder test copy was removed.
+The fix and remaining neighbour are recorded in `04-memory/release-0.1.2-fix.md`.
+
 HOLD. Two regressions emit false contradiction lines, the tool's worst fault.
 Only review evidence was added. Product files and both known CR todos are unchanged.
 

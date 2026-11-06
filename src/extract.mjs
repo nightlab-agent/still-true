@@ -100,9 +100,9 @@ function unquoted(raw) {
 }
 
 // "#12 open, thank once on merge": once mid-field in a later comma field belongs to that step, not to the state before it.
-// A field naming a reference, or narrowed by "only", is a condition on a state, so it stays in the uncertainty check.
+// Keep the field's other uncertainty words, and conditions naming a reference or narrowed by "only".
 const LATER_STEP_ONCE = /,\s*[^,]*?\S\s+once\s[^,]*/g;
-const laterStep = (field) => (field.includes('#') || /\b(?:only|just|not|except|unless)\b/i.test(field) ? field : '');
+const laterStep = (field) => (field.includes('#') || /\b(?:only|just|not|except|unless)\b/i.test(field) ? field : field.replace(/\bonce\b/i, ''));
 
 function claimsFromClause(quote, line) {
   const body = unquoted(quote);
@@ -210,7 +210,7 @@ function closes(lines, from, open) {
 export function extractClaims(text, options = {}) {
   const claims = [];
   let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false, titled = false, planned = null;
-  const flush = () => {
+  const flush = (keepLabel = false) => {
     // A wrapped condition, quotation or historical preamble can change the
     // following line. Separate list items may contain independent nonclaims.
     const blocks = (entry) => entry && !entry.claims.length && !entry.list;
@@ -225,7 +225,8 @@ export function extractClaims(text, options = {}) {
       const after = paragraph[i + 1]; // A planning item says nothing of the line before it.
       if (!blocks(paragraph[i - 1]) && (!blocks(after) || after.parent)) claims.push(...entry.claims);
     });
-    paragraph = [];
+    // Quote boundaries separate claims without ending a historical label's scope.
+    paragraph = keepLabel && old >= 0 ? [paragraph[old]] : [];
   };
   // The file's level 1 title above a current section does not switch it off.
   const readable = () => sections.every((section, i) => section.current || (section.title && i < sections.length - 1));
@@ -260,7 +261,7 @@ export function extractClaims(text, options = {}) {
       raw = bare;
       if (quote === null && /^ {0,3}(?:(?:[-+*]|[0-9]+[.)])\s+)*>/.test(raw)) {
         // End the preceding paragraph, but keep an unmarked prose continuation quoted.
-        flush();
+        flush(true);
         paragraph.push({ claims: [], list: false, indent: Infinity, blockquote: true });
         continue;
       }
@@ -311,7 +312,7 @@ export function extractClaims(text, options = {}) {
       const label = /:\s*$/.test(raw) && PREAMBLE.test(body);
       const bare = body.replace(/[*_`]/g, '');
       const item = /^\s*(?:[-+*]|[0-9]+[.)])\s+/.test(raw);
-      if (item && paragraph.at(-1)?.blockquote) flush(); // A new list is not a quote continuation.
+      if (item && paragraph.at(-1)?.blockquote) flush(true); // A new list is not a quote continuation.
       const colon = /:\s*$/.test(bare);
       const parent = item && colon && PLANNED.test(bare);
       // A list item that opens a current list does not silence its first child.
