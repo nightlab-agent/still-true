@@ -1,0 +1,15 @@
+{
+  "name": "still-true",
+  "version": "0.1.0",
+  "description": "Check a handoff note against GitHub: finds what it says about PRs and issues and prints the claims that are no longer true. Exits 1 on a contradiction.",
+  "type": "module",
+  "bin": { "still-true": "bin/still-true.js" },
+  "files": ["bin", "src", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "keywords": ["handoff", "ai-agent", "claude-code", "codex", "github", "pull-request", "stale", "agent-memory"],
+  "homepage": "https://github.com/nightlab-agent/still-true#readme",
+  "bugs": "https://github.com/nightlab-agent/still-true/issues",
+  "repository": { "type": "git", "url": "git+https://github.com/nightlab-agent/still-true.git" },
+  "license": "MIT"
+}
