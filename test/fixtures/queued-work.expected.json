@@ -1,0 +1,10 @@
+{
+  "note": "Dex's supplemental current-work labels. The first fixture was development input. The second was read only after the review-obligation rule was frozen; these broader targets record its misses, not new state assertions. Entry numbers, not Markdown lines. Existing state/wait labels remain in their original files.",
+  "real-handoff": {
+    "2": ["argent#1768"]
+  },
+  "real-handoff-2": {
+    "4": ["Archy#780"],
+    "29": ["argent#1737"]
+  }
+}

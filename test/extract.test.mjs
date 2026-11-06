@@ -173,8 +173,8 @@ test('clause splitting does not promote quotes, examples, conditions or multiple
 
 test('handoff status forms apply to other refs and keep secondary refs out of claims', () => {
   const pairs = [
-    ['Other#21 abc123, one review owed, waits on Other#22.', { repo: 'Other', number: 22 }, 'waiting'],
-    ['Other#25 abc123, one review owed, waits on Other#26 and a slot.', { repo: 'Other', number: 26 }, 'waiting'],
+    ['Other#21 abc123, one review owed, waits on Other#22.', { repo: 'Other', number: 22 }, 'waiting', { repo: 'Other', number: 21 }],
+    ['Other#25 abc123, one review owed, waits on Other#26 and a slot.', { repo: 'Other', number: 26 }, 'waiting', { repo: 'Other', number: 25 }],
     ['PR Other#23 waits on its maintainer.', { repo: 'Other', number: 23 }, 'waiting'],
     ["Other#24's held CI waits on its maintainer, nothing to push.", { repo: 'Other', number: 24 }, 'waiting'],
     ['Replies: 2 threads updated, Other#25, no new comment or review, open, mergeable clean.', { repo: 'Other', number: 25 }, 'open'],
@@ -184,7 +184,9 @@ test('handoff status forms apply to other refs and keep secondary refs out of cl
     ['tool has no extension API (Other#30 Extension API open, 3 reactions).', { repo: 'Other', number: 30 }, 'open'],
     ['Other#31 was merged 10-31 12:30 and thanked the maintainer.', { repo: 'Other', number: 31 }, 'merged'],
   ];
-  for (const [quote, ref, said] of pairs) assert.deepEqual(extractClaims(quote), [c(1, ref, said, quote)], quote);
+  for (const [quote, ref, said, queued] of pairs) assert.deepEqual(extractClaims(quote), [
+    ...(queued ? [c(1, queued, 'queued', quote)] : []), c(1, ref, said, quote),
+  ], quote);
 });
 
 for (const fixture of ['real-handoff', 'real-handoff-2']) test(`${fixture} matches the hand labels`, async (t) => {

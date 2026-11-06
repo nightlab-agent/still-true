@@ -4,7 +4,7 @@ Your handoff note says "waiting on #12". #12 merged yesterday. The next session 
 
     npx @nightlab-agent/still-true STATE.md --repo owner/name --alias Archy=hslee16/Archy
 
-`still-true` reads a note, finds the sentences that say a pull request or issue is open, merged, closed or being waited on, and asks GitHub. It prints only what no longer holds:
+`still-true` reads a note, finds the sentences that say a pull request or issue is open, merged, closed or being waited on, and asks GitHub. It also checks references named as queued review work. It prints contradictions and things to look at:
 
     STATE.md:5  said open, but hslee16/Archy#827 is merged 2026-11-05  https://github.com/hslee16/Archy/pull/827
       "hslee16/Archy#827 open"
@@ -24,7 +24,12 @@ In a Markdown file with headings, it reads a section only if its heading starts 
 
 - `said open, but ... is merged`: a contradiction. The note and GitHub disagree.
 - `look: waits on ..., which is merged`: the note waits on something finished. It may be waiting for a release or a reply, so read it. This does not fail the run.
+- `look: queued work on ..., which is closed (not_planned)`: the note queues review work for a finished reference. Read whether that work still belongs in the queue. This does not fail the run.
 - `not checked`: it could not place the reference, or GitHub has no such issue, or it is private. Nothing was verified for that line.
+
+Queued work needs a reference at the start of a clause, optionally labelled PR, issue or pull request, then an optional commit hash and a counted review obligation such as `argent#1768 81004b3 owes one critic` or `argent#1768, one review owed`. Counts are a, an, one, two, three or a positive integer; the nouns are critic(s) or review(s). `still` may precede the obligation. One comma may separate the reference/hash from it, and a following wait may start with `and` or a comma. An open reference stays quiet. A reference alone, a past-tense obligation, or other trailing prose does not qualify. The usual historical, quoted and planning scopes stay out.
+
+Look and contradiction lines include GitHub's `state_reason` when supplied, such as `closed (not_planned)` or `closed (completed)`. The reason adds context; it does not change the verdict.
 
 ## Exit status
 
@@ -43,6 +48,7 @@ Add `--json` for one JSON object on stdout, with no text lines. Exit codes stay 
 The object has `schema: 1`, `complete`, `reason` (`null` on success), `counts` and `claims`.
 Counts are `checked`, `contradicted`, `looks` and `notChecked`; checked includes contradictions, looks and ok claims.
 Each claim has `file`, a 1-based `line`, `reference` (resolved to `owner/repo#number` when possible), `said`, `actual` (`open`, `merged`, `closed` or `null` when unknown), `kind` (`contradiction`, `look`, `not checked` or `ok`), and `url` when known.
+`said` can also be `queued`, for the review obligations above. A nonempty GitHub `state_reason` is included as an optional string field; null or absent reasons are omitted.
 
 A failed read or unreadable file sets `complete: false` and gives the reason, keeping earlier results. The run stops there; claims already extracted from the current file that were not reached have kind `not checked`. Later files have no entries. A complete run can still have unchecked claims, such as an unresolved alias or a private issue. No claims gives an empty array and zero counts. `--json --help` returns the help text in a `help` field.
 
@@ -57,6 +63,10 @@ A failed read or unreadable file sets `complete: false` and gives the reason, ke
 
 An earlier parser scored 0 of 17 on hand-labelled sentences it had not seen. Rewritten against 40 other labelled claims, it found 16 of the same 17, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
 
+The queued-review extension finds the reported subject and preserves its dependency. In `test/fixtures`, the development handoff scores 13/13 required claims with 0 extras. The second handoff, held out from development of this extension, retains 28/28 required claims plus 2 permitted optional claims, with 0 extras. It has no counted review obligations: two separately labelled current-work references (a fix ready on a branch and fixes waiting on a date) still go unread, so new-work recall there is 0/2. This supports keeping the rule narrow, not treating every named reference as current work. `node test/score-queued.mjs` reproduces that supplemental score; checking every uncovered mention instead adds 22 unlabelled references in the first handoff and 12 in the second. These are small samples of the same author's notes, not evidence of recall on other writers.
+
+The rule also misses `needs review`, uncounted obligations, labels before the reference, shared subjects and wrapped obligations. A historical mention without any historical wording or scope can still look current. Silence remains an incomplete reading of the note.
+
 ## The contract between the two halves
 
 `src/extract.mjs` (no network):
@@ -65,14 +75,14 @@ An earlier parser scored 0 of 17 on hand-labelled sentences it had not seen. Rew
 
 - `line`: 1-based line number in the note.
 - `ref`: `{ owner, repo, number }`, or `{ repo, number }` for the short form `Archy#827`, or `{ number }` for `#12`.
-- `said`: `"open"`, `"merged"`, `"closed"` or `"waiting"`: what the sentence claims is true now.
+- `said`: `"open"`, `"merged"`, `"closed"` or `"waiting"` for a present-state claim, or `"queued"` for a counted review obligation.
 - `quote`: the sentence, trimmed to 160 characters.
 
-A sentence that does not claim a present state gives no claim.
+A sentence needs a present-state claim or the narrow queued-review form above to give a claim.
 
-`src/github.mjs` (network) turns a ref into `{ state: "open" | "merged" | "closed", kind, at, url }`.
+`src/github.mjs` (network) turns a ref into `{ state: "open" | "merged" | "closed", kind, at, url }`, with an optional nonempty `state_reason` string from GitHub.
 
-`src/compare.mjs` decides: `said` against `state`. "closed" said of a merged PR is not a contradiction.
+`src/compare.mjs` decides: `said` against `state`. "closed" said of a merged PR is not a contradiction. Waiting and queued review work on a closed or merged reference are advisory looks.
 
 ## Credit
 

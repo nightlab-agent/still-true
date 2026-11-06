@@ -23,10 +23,11 @@ export async function readState({ owner, repo, number }, { fetchFn = fetch, toke
   const d = await res.json();
   if (d.state !== 'open' && d.state !== 'closed') throw new Error(`GitHub gave no state for ${owner}/${repo}#${number}`);
   const url = d.html_url;
+  const reason = typeof d.state_reason === 'string' && d.state_reason ? { state_reason: d.state_reason } : {};
   if (d.pull_request) {
     const merged = d.pull_request.merged_at;
-    if (merged) return { state: 'merged', kind: 'pull', at: merged, url };
-    return { state: d.state, kind: 'pull', at: d.closed_at ?? d.updated_at ?? null, url };
+    if (merged) return { state: 'merged', kind: 'pull', at: merged, url, ...reason };
+    return { state: d.state, kind: 'pull', at: d.closed_at ?? d.updated_at ?? null, url, ...reason };
   }
-  return { state: d.state, kind: 'issue', at: d.closed_at ?? d.created_at ?? null, url };
+  return { state: d.state, kind: 'issue', at: d.closed_at ?? d.created_at ?? null, url, ...reason };
 }

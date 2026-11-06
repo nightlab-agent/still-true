@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Counted review obligations such as `argent#1768 81004b3 owes one critic` now check the queued reference as well as any explicit dependency. Finished references produce advisory look lines; exit codes are unchanged. Bare mentions and past-tense obligations stay quiet.
+- Look and contradiction lines, and JSON claims, retain GitHub's `state_reason` when supplied. It adds context without changing verdicts.
+- Blockquoted waits no longer leak into the note's own claims.
 - `--json` prints one object with schema 1, completeness, counts and every extracted claim. Failed reads keep earlier results and give the reason; exit codes are unchanged.
 - A failed read no longer suggests raising the rate limit unless the failure mentions a rate limit.
 - A next step after a comma, as in `#12 open, thank once on merge`, no longer hides the state before it. `#12 merged, once CI passes` stays a condition and prints nothing.

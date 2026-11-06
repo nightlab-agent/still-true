@@ -1,4 +1,4 @@
-// Six grammar rules, shared by bare statements, labelled lists and fact fields.
+// State and wait grammar, shared by bare statements, labelled lists and fact fields.
 const TOKEN = '[a-z0-9_./-]*#[a-z0-9_.-]+';
 const HAS_REF = new RegExp(TOKEN, 'i');
 const SUBJECT = new RegExp(`^((?:[^#]*\\s)?)(${TOKEN}(?:\\s+and\\s+${TOKEN})*)(.*)$`, 'i');
@@ -6,6 +6,10 @@ const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|
 const BEFORE_REF = new RegExp(`(?<![\\w-])\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
 const COUNT_STATE = /^\d+\s+(open|merged|closed)$/i;
 const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|(?:its|the) maintainer)(?:\\s+(?:to merge|for a response|and\\s+(?:a|an|the|its)\\s+[\\w -]+))?$`, 'i');
+// A counted review obligation names queued work, without asserting it is open.
+// Only the obligation and an optional wait qualify; other trailing prose stays quiet.
+const REVIEW_COUNT = '(?:a|an|one|two|three|[1-9][0-9]*)';
+const QUEUED = new RegExp(`^(?:(?:PR|issue|pull request)\\s+)?(${TOKEN})(?:\\s+[a-f0-9]{6,40})?(?:\\s+|,\\s*)(?:still\\s+)?(?:owes\\s+${REVIEW_COUNT}\\s+(?:critic|review)s?|${REVIEW_COUNT}\\s+(?:critic|review)s?\\s+owed)(.*)$`, 'i');
 const LABEL_LIST = new RegExp(`(?:^|:\\s*)(open|merged|closed)(?:\\s+(?:PRs|issues|pull requests))?:\\s*(${TOKEN}(?:\\s*(?:,|and)\\s*${TOKEN})*)$`, 'i');
 
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
@@ -172,12 +176,22 @@ function claimsFromClause(quote, line) {
     }
     afterComma = delimiter === ',';
   }
+  const queued = QUEUED.exec(body.trim().replace(/[.!]$/, ''));
+  if (queued) {
+    const rest = queued[2].trim();
+    const wait = /^(?:,\s*|and\s+)/i.test(rest) ? WAIT.exec(rest.replace(/^(?:,\s*|and\s+)/i, '')) : null;
+    const claim = makeClaim(queued[1], 'queued', quote, line);
+    // An existing state or self-wait is more specific; avoid two looks for it.
+    if ((!rest || wait?.index === 0) && claim && !claims.some((c) =>
+      c.ref.owner === claim.ref.owner && c.ref.repo === claim.ref.repo && c.ref.number === claim.ref.number)) claims.unshift(claim);
+  }
   return claims;
 }
 
 function claimsFromLine(raw, line) {
   if (/^(?: {4}|\t)/.test(raw)) return [];
   const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
+  if (body.startsWith('>')) return [];
   const claims = [];
   for (const clause of clauses(body)) {
     if (PREAMBLE.test(clause)) break;

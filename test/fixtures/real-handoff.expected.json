@@ -1,7 +1,7 @@
 {
   "note": "Rick's own hand labels of real handoff wording. line -> what a careful reader would check. Lines not listed must stay silent.",
   "claims": {
-    "2": { "ref": "argent#1762", "said": "waiting" },
+    "2": [{ "ref": "argent#1768", "said": "queued" }, { "ref": "argent#1762", "said": "waiting" }],
     "3": { "ref": "Archy#716", "said": "open" },
     "4": { "ref": "argent#1724", "said": "open" },
     "5": { "ref": "#427", "said": "waiting" },

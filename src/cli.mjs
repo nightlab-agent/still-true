@@ -99,6 +99,7 @@ export async function run(argv, deps) {
           entry.actual = real?.state ?? null;
           entry.kind = r.verdict === 'contradicted' ? 'contradiction' : r.verdict === 'unknown' ? 'not checked' : r.verdict;
           if (real?.url) entry.url = real.url;
+          if (real?.state_reason) entry.state_reason = real.state_reason;
         }
         if (r.verdict === 'unknown') {
           unplaced++;
@@ -107,13 +108,15 @@ export async function run(argv, deps) {
         }
         checked++;
         const when = real.at ? ` ${real.at.slice(0, 10)}` : '';
+        const reason = real.state_reason ? ` (${real.state_reason})` : '';
         if (r.verdict === 'look') {
           looks++;
-          print(`${file}:${claim.line}  look: waits on ${name(ref)}, which is ${real.state}${when}  ${real.url}`);
+          const action = claim.said === 'queued' ? 'queued work on' : 'waits on';
+          print(`${file}:${claim.line}  look: ${action} ${name(ref)}, which is ${real.state}${reason}${when}  ${real.url}`);
           print(`  "${claim.quote}"`);
         } else if (r.verdict === 'contradicted') {
           contradicted++;
-          print(`${file}:${claim.line}  said ${claim.said}, but ${name(ref)} is ${real.state}${when}  ${real.url}`);
+          print(`${file}:${claim.line}  said ${claim.said}, but ${name(ref)} is ${real.state}${reason}${when}  ${real.url}`);
           print(`  "${claim.quote}"`);
         }
       }
