@@ -229,13 +229,13 @@ export function extractClaims(text, options = {}) {
   };
   // The file's level 1 title above a current section does not switch it off.
   const readable = () => sections.every((section, i) => section.current || (section.title && i < sections.length - 1));
-  const enterSection = (level, title) => {
+  const enterSection = (level, title, name = title) => {
     sections = sections.filter((section) => section.level < level);
     // Unknown headings may introduce plans, examples or history. Only a
     // current section (and current ancestors) permits extraction.
     sections.push({ level, current: CURRENT_HEADING.test(title), title: level === 1 && !titled && !/^(?:history|archive|old)\b/i.test(title) });
     titled ||= level === 1;
-    if (!readable()) options.skipped?.push(title);
+    if (!readable()) options.skipped?.push(name);
   };
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
@@ -270,6 +270,13 @@ export function extractClaims(text, options = {}) {
       paragraph.push({ claims: [], list: false, indent: Infinity });
       continue;
     }
+    // Fenced examples do not contain headings, even within a quotation.
+    const opening = /^ {0,3}(`{3,}|~{3,})/.exec(raw);
+    if (opening) {
+      flush();
+      fence = opening[1];
+      continue;
+    }
     const quoted = quote !== null;
     quote = endQuote(raw, quote);
     // A mark inside text that nothing closes was a stray.
@@ -283,19 +290,17 @@ export function extractClaims(text, options = {}) {
       paragraph.push({ claims: [], list: false, indent: Infinity });
       continue;
     }
-    const opening = /^ {0,3}(`{3,}|~{3,})/.exec(raw);
     const heading = /^ {0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/.exec(raw);
     const underline = /^ {0,3}(=+|-+)\s*$/.exec(raw);
-    if (opening) {
-      flush();
-      fence = opening[1];
-    } else if (heading) {
+    if (heading) {
       flush();
       enterSection(heading[1].length, heading[2]);
     } else if (underline && paragraph.length && !(underline[1][0] === '-' && paragraph.some((entry) => entry.item))) {
-      const title = paragraph.length === 1 ? lines[index - 1].trim() : '';
+      const title = paragraph.map((entry) => entry.text).filter(Boolean).join(' ');
+      // Preserve the conservative reading of multiline headings while naming them.
+      const currentTitle = paragraph.length === 1 ? lines[index - 1].trim() : '';
       paragraph = [];
-      enterSection(underline[1][0] === '=' ? 1 : 2, title);
+      enterSection(underline[1][0] === '=' ? 1 : 2, currentTitle, title);
     } else if (underline && paragraph.length) {
       flush(); // A rule after a list item, not a heading underline.
     } else if (!raw.trim()) {
@@ -311,7 +316,7 @@ export function extractClaims(text, options = {}) {
       const parent = item && colon && PLANNED.test(bare);
       // A list item that opens a current list does not silence its first child.
       const list = item && (!colon || CURRENT_HEADING.test(bare));
-      paragraph.push({ claims, list, item, label, parent, indent: /^\s*/.exec(raw)[0].length });
+      paragraph.push({ claims, list, item, label, parent, text: raw.trim(), indent: /^\s*/.exec(raw)[0].length });
     }
   }
   flush();

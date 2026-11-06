@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- A run that finds no claims names the sections it skipped, and `--json` lists them in `skipped_sections`. A note with claims under `## Next` no longer reads as clean.
+- A run that finds no claims in any input file names the sections it skipped, and `--json` lists them in `skipped_sections`. If any file supplies a claim, skipped sections are not reported.
 - Counted review obligations such as `argent#1768 81004b3 owes one critic` now check the queued reference as well as any explicit dependency. Finished references produce advisory look lines; a look alone exits `0`. These additional claims can change the run's exit status: a failed queued read stops the run (`2` before any contradiction, `1` after one), and a queued line can keep a neighbouring state claim from being suppressed as adjacent nonclaim prose, exposing a contradiction (`1`). Bare mentions and past-tense obligations stay quiet.
 - Look and contradiction lines, and JSON claims, retain GitHub's `state_reason` when supplied. It adds context without changing verdicts.
 - Blockquoted lines, including quotes inside nested list markers, contribute no state, wait or queued-work claims. They no longer silence the preceding paragraph or an independent list item after them; an immediately following unmarked prose continuation still stays out.
