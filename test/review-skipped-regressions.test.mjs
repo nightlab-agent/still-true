@@ -22,7 +22,7 @@ test('a multiline setext heading reports its whole name', async () => {
   assert.deepEqual(JSON.parse(result.lines.join('')).skipped_sections, ['Next steps']);
   assert.deepEqual((await go(text)).lines, [
     'no claims about PR or issue state found',
-    'skipped 1 section: Next steps. A section is read only if its heading, and every heading above it, starts with Now, Handoff, State, Status or Current.',
+    'skipped 1 section: Next steps. A section is read only if its heading, and every heading above it, apart from the file\'s title, starts with Now, Handoff, State, Status or Current.',
   ]);
 });
 test('control: a single-line setext heading reports its name', async () => {

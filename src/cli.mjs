@@ -138,7 +138,7 @@ export async function run(argv, deps) {
   if (!checked && !unplaced) {
     print('no claims about PR or issue state found');
     if (!skipped.length) return finish(0);
-    print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. A section is read only if its heading, and every heading above it, starts with Now, Handoff, State, Status or Current.`);
+    print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. A section is read only if its heading, and every heading above it, apart from the file's title, starts with Now, Handoff, State, Status or Current.`);
     return finish(0, null, { skipped_sections: skipped });
   }
   const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');

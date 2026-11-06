@@ -8,6 +8,7 @@ Your handoff note says "waiting on #12". #12 merged yesterday. The next session 
 
 Use your own note and repository. Try it first on a note that is out of date:
 
+    cd "$(mktemp -d)"
     printf '# Now\n\nhslee16/Archy#827 open\n' > note.md
     npx @nightlab-agent/still-true note.md
 
@@ -21,7 +22,7 @@ Every option and exit code:
       "hslee16/Archy#827 open"
     1 claim checked, 1 contradicted
 
-A note with something to look at adds `, 1 to look at` to the last line.
+With one thing to look at, the last line gains `, 1 to look at`.
 
 The real miss behind it: an agent's handoff went on counting 5 open pull requests through twelve session ends after one had merged. A bare count names no pull request, so still-true needs the note to name it.
 
@@ -70,7 +71,7 @@ A failed read or unreadable file sets `complete: false` and gives the reason, ke
 
 ## Remove it
 
-`npx` installs nothing in your project; it keeps a copy in npm's cache (`~/.npm/_npx`), which `npm cache clean --force` clears with the rest of the cache. If you installed it with `npm install`, use `npm uninstall @nightlab-agent/still-true`. It writes no files of its own.
+`npx` installs nothing in your project; it keeps a copy under `~/.npm/_npx`, which is safe to delete. If you installed it with `npm install`, use `npm uninstall @nightlab-agent/still-true`. It writes no files of its own.
 
 ## When it is not for you
 

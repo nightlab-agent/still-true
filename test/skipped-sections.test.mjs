@@ -43,7 +43,7 @@ test('the skip line names the rule for headings above a section', async () => {
 });
 test('control: the rule is in the line for a single flat section too', async () => {
   const { lines } = await exec('## Next\n- #1 is open\n');
-  assert.equal(lines[1], 'skipped 1 section: Next. A section is read only if its heading, and every heading above it, starts with Now, Handoff, State, Status or Current.');
+  assert.equal(lines[1], 'skipped 1 section: Next. A section is read only if its heading, and every heading above it, apart from the file\'s title, starts with Now, Handoff, State, Status or Current.');
 });
 test('two files: each skipped section names its file', async () => {
   const texts = { 'a.md': '## Next\n- #1 is open\n', 'b.md': '## Later\n- #2 is open\n' };
