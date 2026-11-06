@@ -219,7 +219,9 @@ export function extractClaims(text, _options = {}) {
     } else if (!raw.trim()) {
       flush();
     } else {
-      const claims = sections.every((section) => section.current) ? claimsFromLine(raw, index + 1) : [];
+      // A level 1 title above a current section does not switch it off.
+      const readable = sections.every((section, i) => section.current || (section.level === 1 && i < sections.length - 1));
+      const claims = readable ? claimsFromLine(raw, index + 1) : [];
       const list = /^ {0,3}(?:[-+*]|[0-9]+[.)])\s+/.test(raw) && !/:\s*$/.test(raw);
       paragraph.push({ claims, list });
     }

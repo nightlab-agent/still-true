@@ -33,6 +33,9 @@ const name = (ref) => (ref.owner ? `${ref.owner}/${ref.repo}#${ref.number}` : re
 export async function run(argv, deps) {
   const { out, extract, readFile = fsRead, read, token, defaultRepo = originRepo, env = process.env } = deps;
   const args = parseArgs(argv);
+  if (argv.includes('--help')) { out(USAGE); return 0; }
+  const odd = args.files.find((f) => f.startsWith('--'));
+  if (odd) { out(`unknown option ${odd}`); out(USAGE); return 2; }
   if (!args.files.length) { out(USAGE); return 2; }
   const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
   const seen = new Map();

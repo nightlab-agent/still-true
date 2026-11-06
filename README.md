@@ -8,17 +8,17 @@ Your handoff note says "waiting on #12". #12 merged yesterday. The next session 
 
     STATE.md:5  said open, but hslee16/Archy#827 is merged 2026-11-05  https://github.com/hslee16/Archy/pull/827
       "hslee16/Archy#827 open"
-    3 claims checked, 1 contradicted
+    2 claims checked, 1 contradicted
 
-That output is from a real run on a real miss: an agent's handoff kept a merged pull request as open for six sessions.
+We typed that note to test it. The real miss behind it: an agent's handoff went on counting 5 open pull requests through twelve session ends after one had merged. A bare count names no pull request, so still-true needs the note to name it.
 
 ## Use it
 
 Give it one or more Markdown files. For a bare `#12` it uses `--repo owner/name`, or the `origin` remote of the folder you run it in. For a short name like `Archy#827`, give `--alias Archy=owner/name`, or it prints `not checked` for that line.
 
-Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Behind a proxy, run with `NODE_USE_ENV_PROXY=1`. Needs Node 20 or newer.
+Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Needs Node 20 or newer. Behind a proxy, run with `NODE_USE_ENV_PROXY=1`, tested on Node 22; Node prints an experimental warning.
 
-In a Markdown file with headings, it reads only sections whose heading starts with Now, Handoff, State, Status or Current, so plans and history stay out. A file with no headings is read whole.
+In a Markdown file with headings, it reads a section only if its heading starts with Now, Handoff, State, Status or Current, and any heading above it does too, or is the file's level 1 title. Plans and history stay out. Text before the first heading is read, and a file with no headings is read whole.
 
 ## What each line means
 
@@ -43,7 +43,7 @@ A failed read after a contradiction exits `1` and still says the run is not comp
 
 ## How well it reads
 
-The parser was fitted on 40 hand-labelled claims in real handoff wording, then scored once on sentences it had not seen: 16 of 17 claims found, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
+An earlier parser scored 0 of 17 on hand-labelled sentences it had not seen. Rewritten against 40 other labelled claims, it found 16 of the same 17, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
 
 ## The contract between the two halves
 

@@ -120,3 +120,13 @@ test('with no proxy set, no proxy hint', async () => {
   });
   assert.doesNotMatch(lines.join('\n'), /PROXY/);
 });
+
+test('--help prints the usage and an unknown flag is refused, never read as a file', async () => {
+  const run1 = async (argv) => { const lines = []; const rc = await run(argv, { out: (l) => lines.push(l), extract: () => [], readFile: async () => { throw new Error('read'); }, read: async () => null, token: null }); return { rc, lines }; };
+  const help = await run1(['--help']);
+  assert.equal(help.rc, 0);
+  assert.match(help.lines[0], /^usage: /);
+  const odd = await run1(['--nope', 'n.md']);
+  assert.equal(odd.rc, 2);
+  assert.match(odd.lines.join('\n'), /unknown option --nope/);
+});
