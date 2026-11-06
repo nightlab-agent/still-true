@@ -6,17 +6,22 @@ import { readState, resolveRef } from './github.mjs';
 const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name]';
 
 export function repoFromRemote(url) {
-  const m = /github\.com[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\s*$/.exec(url ?? '');
+  const m = /^(?:[a-z+]+:\/\/(?:[^@/\s]+@)?|[^@/\s]+@)?(?:www\.)?github\.com(?::\d+)?[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?\s*$/i.exec(url ?? '');
   return m ? `${m[1]}/${m[2]}` : null;
 }
 
+const FULL = /^[^/\s=]+\/[^/\s=]+$/;
+
 export function parseArgs(argv) {
-  const a = { files: [], aliases: {}, repo: undefined };
+  const a = { files: [], aliases: {}, repo: undefined, bad: null };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--repo') a.repo = argv[++i];
-    else if (argv[i] === '--alias') {
-      const [name, full] = (argv[++i] ?? '').split('=');
-      if (name && full) a.aliases[name] = full;
+    if (argv[i] === '--repo') {
+      a.repo = argv[++i];
+      if (!FULL.test(a.repo ?? '')) a.bad ??= '--repo needs owner/name';
+    } else if (argv[i] === '--alias') {
+      const [name, full, more] = (argv[++i] ?? '').split('=');
+      if (name && FULL.test(full ?? '') && more === undefined) a.aliases[name] = full;
+      else a.bad ??= '--alias needs Name=owner/name';
     } else a.files.push(argv[i]);
   }
   return a;
@@ -36,6 +41,7 @@ export async function run(argv, deps) {
   if (argv.includes('--help')) { out(USAGE); return 0; }
   const odd = args.files.find((f) => f.startsWith('--'));
   if (odd) { out(`unknown option ${odd}`); out(USAGE); return 2; }
+  if (args.bad) { out(args.bad); out(USAGE); return 2; }
   if (!args.files.length) { out(USAGE); return 2; }
   const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
   const seen = new Map();
@@ -44,7 +50,11 @@ export async function run(argv, deps) {
   for (const file of args.files) {
     let text;
     try { text = await readFile(file, 'utf8'); }
-    catch (e) { out(`${file}: cannot read: ${e.message}`); return 2; }
+    catch (e) {
+      out(`${file}: cannot read: ${e.message}`);
+      out('This run is not complete.');
+      return contradicted ? 1 : 2;
+    }
     for (const claim of extract(text, { aliases: args.aliases })) {
       const ref = resolveRef(claim.ref, { defaultRepo: repo, aliases: args.aliases });
       if (!ref) {

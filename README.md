@@ -30,9 +30,9 @@ In a Markdown file with headings, it reads a section only if its heading starts 
 
 - `0`: nothing contradicted. Look lines may have printed.
 - `1`: at least one contradiction.
-- `2`: bad usage, an unreadable file, or a failed read before any contradiction. The run is not complete.
+- `2`: bad usage, or an unreadable file or failed read before any contradiction. The run is not complete.
 
-A failed read after a contradiction exits `1` and still says the run is not complete.
+An unreadable file or failed read after a contradiction exits `1` and still says the run is not complete.
 
 ## When it is not for you
 
