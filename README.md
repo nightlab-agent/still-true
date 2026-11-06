@@ -18,7 +18,7 @@ Give it one or more Markdown files. For a bare `#12` it uses `--repo owner/name`
 
 Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Behind a proxy, run with `NODE_USE_ENV_PROXY=1`. Needs Node 20 or newer.
 
-In a Markdown file with headings, it reads only sections called Now, Handoff, State, Status or Current, so plans and history stay out. A file with no headings is read whole.
+In a Markdown file with headings, it reads only sections whose heading starts with Now, Handoff, State, Status or Current, so plans and history stay out. A file with no headings is read whole.
 
 ## What each line means
 
@@ -38,7 +38,12 @@ A failed read after a contradiction exits `1` and still says the run is not comp
 
 - Silence does not mean your note is true. It means no contradiction was found in the sentences it understood. It stays quiet when unsure, on purpose.
 - It knows pull request and issue state only. "Open 5/5" names no reference, so it cannot check that. Nor does it check branches, commits or tests.
+- A bare `#3` is read against your default repository. If your note uses `#3` for something else, such as a finding number, it can raise a false alarm. Prefer `owner/repo#3` or an alias.
 - It does not read a stale plan for you. If your notes rarely name a PR or issue, it has nothing to read.
+
+## How well it reads
+
+The parser was fitted on 40 hand-labelled claims in real handoff wording, then scored once on sentences it had not seen: 16 of 17 claims found, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
 
 ## The contract between the two halves
 
