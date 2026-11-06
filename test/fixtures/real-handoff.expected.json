@@ -1,0 +1,18 @@
+{
+  "note": "Rick's own hand labels of real handoff wording. line -> what a careful reader would check. Lines not listed must stay silent.",
+  "claims": {
+    "2": { "ref": "argent#1762", "said": "waiting" },
+    "3": { "ref": "Archy#716", "said": "open" },
+    "4": { "ref": "argent#1724", "said": "open" },
+    "5": { "ref": "#427", "said": "waiting" },
+    "6": { "ref": "#799", "said": "waiting" },
+    "7": { "ref": "claudelint#280", "said": "waiting" },
+    "8": { "ref": "cost-guard#6", "said": "merged" },
+    "9": { "ref": "Archy#736", "said": "merged" },
+    "10": { "ref": "vercel-labs/skills#2593", "said": "closed" },
+    "12": { "ref": "EvoScientist#696", "said": "open" },
+    "13": { "ref": "crush#2038", "said": "open" },
+    "15": { "ref": "Archy#827", "said": "merged" }
+  },
+  "harder_may_stay_silent": { "11": "a list after a label: five refs all waiting", "14": "waiting on a critic, not on the PR: silent is right" }
+}
