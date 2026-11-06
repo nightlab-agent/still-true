@@ -1,22 +1,28 @@
 // Six grammar rules, shared by bare statements, labelled lists and fact fields.
 const TOKEN = '[a-z0-9_./-]*#[a-z0-9_.-]+';
+const HAS_REF = new RegExp(TOKEN, 'i');
 const SUBJECT = new RegExp(`^((?:[^#]*\\s)?)(${TOKEN}(?:\\s+and\\s+${TOKEN})*)(.*)$`, 'i');
 const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|already|was(?=\s+merged\b)|(?:PR|issue)(?:\s+is)?)\s+)?(open|merged|closed)\b(?!-)(.*)$/i;
-const BEFORE_REF = new RegExp(`\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
+const BEFORE_REF = new RegExp(`(?<![\\w-])\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
 const COUNT_STATE = /^\d+\s+(open|merged|closed)$/i;
 const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|(?:its|the) maintainer)(?:\\s+(?:to merge|for a response))?$`, 'i');
 const LABEL_LIST = new RegExp(`(?:^|:\\s*)(open|merged|closed)(?:\\s+(?:PRs|issues|pull requests))?:\\s*(${TOKEN}(?:\\s*(?:,|and)\\s*${TOKEN})*)$`, 'i');
 
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
 const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
-const PREAMBLE = /^(?:if|unless|when|yesterday|old note|example|suppose|imagine)\b/i;
-const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|think|believe)\b/i;
+const PREAMBLE = /^(?:if|unless|once|after|when|until|yesterday|old note|example|suppose|imagine)\b/i;
+const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|when|until|need|get|think|believe|locally|re-?opened)\b|\bonce\s+(?!at\b)\S|n['’]t\b|\bby\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|next)\b/i;
 const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|already)\s+)?(?:open|merged|closed)|(?:was|were|used to be)\s+(?:(?:still|currently|already)\s+)?(?:open|closed)|(?:open|merged|closed)\s+or\s+(?:open|merged|closed))\b/i;
-const QUALIFIED_STATE = /^\s+(?:to|into|for|or)\b/i;
+const QUALIFIED_STATE = /^\s+(?:to|into|for|or|after)\b/i;
+// A later comma field must look like a state fact, not "open question".
+const COMMA_STATE_TAIL = /^(?:$|\s+(?:\d|today\b|yesterday\b|last\b|since\b|by\b|as\s+a\s+duplicate\b))/i;
+// An initial "open PR" needs a predicate to distinguish it from a command.
+const OPEN_PREDICATE = /^\s+(?:is|has|needs|touches)\b/i;
+const OPEN_POSSESSIVE = /(?:['’]s|\b(?:my|our|your|their|his|her|its))\s*$/i;
 // Subjects may have a noun label or a possessive determiner, but objects of
 // phrases such as "a PR for issue #12" are not the subject of that PR's state.
 const SUBJECT_PREFIX = /^(?:(?:PR|issue|pull request)|(?:[\w'-]+\s+)+(?:PR|issue|pull request)|(?:the\s+)?[\w-]+['’]s|(?:my|our|your|their|his|her|its)(?:\s+own)?)?$/i;
-const OBJECT_PREFIX = /\b(?:for|of|on|about)\b/i;
+const OBJECT_PREFIX = /\b(?:for|of|on|about|after)\b/i;
 
 function nextQuote(raw, i, quote) {
   const pairs = { '"': '"', "'": "'", '“': '”', '‘': '’' };
@@ -102,8 +108,8 @@ function claimsFromClause(quote, line) {
   if (labelled) add([...labelled[2].matchAll(new RegExp(TOKEN, 'gi'))].map((m) => m[0]), labelled[1]);
   let context = { subjects: [], list: false, label: false, state: null, hadRef: false };
   const stack = [];
-  // Commas separate facts; parentheses scope them. Neither needs a vocabulary
-  // of comment counts, timestamps, release credits or other incidental facts.
+  let afterComma = false;
+  // Commas separate fact fields; parentheses save and restore subject scope.
   for (const field of body.matchAll(/([^(),:]*)([(),:]|$)/g)) {
     const text = field[1].trim().replace(/[.!]$/, '');
     const delimiter = field[2];
@@ -128,7 +134,8 @@ function claimsFromClause(quote, line) {
     // An issue title within a parenthetical fact may sit between REF and STATE.
     const statusText = subject && stack.length ? tail.replace(/^(?:[A-Z][\w-]*\s+)+(?=(?:open|merged|closed)\b)/, '') : tail;
     const state = bareState ?? STATE.exec(statusText);
-    if (state && !QUALIFIED_STATE.test(state[2])) {
+    if (state && !QUALIFIED_STATE.test(state[2]) &&
+        (!bareState || !afterComma || COMMA_STATE_TAIL.test(state[2]))) {
       add(context.subjects, state[1]);
       context.list = false;
     }
@@ -136,7 +143,14 @@ function claimsFromClause(quote, line) {
     if (waiting) add(REF.test(waiting[1]) ? [waiting[1]] : context.subjects, 'waiting');
     const before = BEFORE_REF.exec(text);
     if (before && (!subject || before.index < subject[1].length) &&
-        (before[1].toLowerCase() !== 'open' || before[2]) && !QUALIFIED_STATE.test(before[4])) add([before[3]], before[1]);
+        (before[1].toLowerCase() !== 'open' || (before[2] &&
+          (OPEN_POSSESSIVE.test(text.slice(0, before.index)) || OPEN_PREDICATE.test(before[4])))) &&
+        !QUALIFIED_STATE.test(before[4])) add([before[3]], before[1]);
+    // A second ref in the predicate may be an object, not the next subject.
+    if (subject && HAS_REF.test(tail)) {
+      context.subjects = [];
+      context.list = false;
+    }
     if (delimiter === ':') context.label = true;
     if (delimiter === '(') {
       const count = COUNT_STATE.exec(text);
@@ -149,6 +163,7 @@ function claimsFromClause(quote, line) {
       // A ref inside parentheses interrupts the inherited subject's fact chain.
       if (child.hadRef) { context.subjects = []; context.list = false; context.hadRef = true; }
     }
+    afterComma = delimiter === ',';
   }
   return claims;
 }
@@ -168,7 +183,7 @@ function claimsFromLine(raw, line) {
 // identity written in the note, including refs that the reader cannot place.
 export function extractClaims(text, _options = {}) {
   const claims = [];
-  let paragraph = [], fence = null, quote = null, comment = false, sections = [];
+  let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false;
   const flush = () => {
     // A wrapped condition, quotation or historical preamble can change the
     // following line. Separate list items may contain independent nonclaims.
@@ -185,8 +200,16 @@ export function extractClaims(text, _options = {}) {
     sections.push({ level, current: CURRENT_HEADING.test(title) });
   };
 
-  const lines = text.split(/\r\n|\n|\r/);
+  const lines = text.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
   for (const [index, raw] of lines.entries()) {
+    if (index === 0 && /^---\s*$/.test(raw)) {
+      frontMatter = true;
+      continue;
+    }
+    if (frontMatter) {
+      if (/^(?:---|\.\.\.)\s*$/.test(raw)) frontMatter = false;
+      continue;
+    }
     if (fence) {
       const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(raw);
       if (close && close[1][0] === fence[0] && close[1].length >= fence.length) fence = null;

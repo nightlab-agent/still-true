@@ -356,3 +356,41 @@ test('a title above a current section does not switch the note off', () => {
   assert.deepEqual(extractClaims('# My project\n\n#12 open'), []);
   assert.deepEqual(extractClaims('## History\n\n### Now\n\n#12 open'), []);
 });
+
+test('conditions, goals, contractions and commands give no claim', () => {
+  for (const text of [
+    'Once PR #12 is merged, release.', 'After PR #12 is merged, deploy.',
+    'Ship when PR #12 is merged.', 'Wait until PR #12 is merged.',
+    'Need PR #12 merged.', 'Next: get PR #12 merged.',
+    '#12 merged by Friday.', '#12 merged once CI passes.',
+    '#12 merged after CI passes.', '#12 merged locally.',
+    "I haven't merged #12 yet.", '#12 isn’t merged.',
+    'Open PR #12 next.', 'Open PR #12.', 'Please open PR #12 next.',
+    're-open PR #12.',
+  ]) assert.deepEqual(extractClaims(text), [], text);
+  assert.equal(extractClaims('#12 merged, thanked once at 00:08.').length, 1);
+});
+
+test('comma fields do not turn other things or superseded states into claims', () => {
+  assert.deepEqual(extractClaims('PR #12 merged, open question on naming.').map(({ ref, said }) => ({ ref, said })), [
+    { ref: { number: 12 }, said: 'merged' },
+  ]);
+  for (const text of [
+    '#12 depends on #13, closed yesterday.',
+    '#12 closed, then reopened.', '#12 closed, then re-opened.',
+  ]) assert.deepEqual(extractClaims(text), [], text);
+  assert.deepEqual(extractClaims('#12 depends on #13, #14 closed.').map(({ ref, said }) => ({ ref, said })), [
+    { ref: { number: 14 }, said: 'closed' },
+  ]);
+});
+
+test('BOM and YAML front matter preserve section filtering and physical lines', () => {
+  assert.deepEqual(extractClaims('\uFEFF# History\n\n#12 open'), []);
+  assert.deepEqual(extractClaims('\uFEFF# Now\n\n#12 open'), [c(3, { number: 12 }, 'open', '#12 open')]);
+  for (const close of ['---', '...']) {
+    const text = `\uFEFF---\nname: "#13 closed"\n${close}\n\n#12 open`;
+    assert.deepEqual(extractClaims(text), [c(5, { number: 12 }, 'open', '#12 open')]);
+  }
+  assert.deepEqual(extractClaims('---\nname: x\n---\n\n## History\n\n#12 open'), []);
+  assert.deepEqual(extractClaims('---\nname: x\n\n#12 open'), []);
+});
