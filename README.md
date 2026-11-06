@@ -27,7 +27,7 @@ In a Markdown file with headings, it reads a section only if its heading starts 
 - `look: queued work on ..., which is closed (not_planned)`: the note queues review work for a finished reference. Read whether that work still belongs in the queue. This does not fail the run.
 - `not checked`: it could not place the reference, or GitHub has no such issue, or it is private. Nothing was verified for that line.
 
-Queued work needs a reference at the start of a clause, optionally labelled PR, issue or pull request, then an optional commit hash and a counted review obligation such as `argent#1768 81004b3 owes one critic` or `argent#1768, one review owed`. Counts are a, an, one, two, three or a positive integer; the nouns are critic(s) or review(s). `still` may precede the obligation. One comma may separate the reference/hash from it, and a following wait may start with `and` or a comma. An open reference stays quiet. A reference alone, a past-tense obligation, or other trailing prose does not qualify. The usual historical, quoted and planning scopes stay out.
+Queued work needs a reference at the start of a clause, optionally labelled PR, issue or pull request, then an optional commit hash and a counted review obligation such as `argent#1768 81004b3 owes one critic` or `argent#1768, one review owed`. Counts are a, an, one, two, three or a positive integer; the nouns are critic(s) or review(s). `still` may precede the obligation. One comma may separate the reference/hash from it, and a following wait may start with `and` or a comma. An open reference stays quiet. A reference alone, a past-tense obligation, or other unquoted trailing prose in that clause does not qualify. Quoted text and inline code are masked before matching: `argent#1768 owes one critic "not anymore"` and ``argent#1768 owes one critic `done` `` still qualify. A wholly quoted obligation stays out, as do historical and planning scopes. Blockquoted lines contribute no claims, including when the quote follows nested list markers. A quote does not silence the preceding paragraph or an independent list item after it; an immediately following unmarked prose line can still continue the quote.
 
 Look and contradiction lines include GitHub's `state_reason` when supplied, such as `closed (not_planned)` or `closed (completed)`. The reason adds context; it does not change the verdict.
 
@@ -38,6 +38,8 @@ Look and contradiction lines include GitHub's `state_reason` when supplied, such
 - `2`: bad usage, or an unreadable file or failed read before any contradiction. The run is not complete.
 
 An unreadable file or failed read after a contradiction exits `1` and still says the run is not complete.
+
+Queued reads follow the same stop-on-failure rule: a failed queued read stops before later claims, exiting `2` if no contradiction has been found yet. Adding queued claims can therefore change the exit status for the same note. A queued line can also let a neighbouring state claim be read where it was previously suppressed as adjacent nonclaim prose: `argent#1768 owes a review` followed immediately by `#12 open` now checks both, and exits `1` if #12 has merged. A look alone still exits `0`.
 
 ## JSON output
 

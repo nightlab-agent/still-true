@@ -35,23 +35,30 @@ test('RED a blockquote in a nested list stays quoted', () => {
 test('PASS comparison: a blockquote in one list stays quoted', () => {
   assert.deepEqual(said('- > waiting on #12'), []);
 });
-test('RED quoted trailing prose does not qualify', () => {
-  assert.deepEqual(said('argent#1768 owes one critic "not anymore"'), []);
-  assert.deepEqual(said('argent#1768 owes one critic `done`'), []);
+test('quoted trailing prose is masked before matching a queued obligation', () => {
+  assert.deepEqual(said('argent#1768 owes one critic "not anymore"'), ['#1768=queued']);
+  assert.deepEqual(said('argent#1768 owes one critic `done`'), ['#1768=queued']);
 });
 test('PASS comparison: unquoted trailing prose does not qualify', () => {
   assert.deepEqual(said('argent#1768 owes one critic, done'), []);
 });
-test('RED a queued read that fails does not hide the contradiction after it', async () => {
+test('a failed queued read stops before a later contradiction, changing exit 1 to 2', async () => {
   const text = 'argent#1768 owes a review.\n\n#12 open';
-  const read = async ({ repo }) => { if (repo === 'argent') throw new Error('GitHub answered 403'); return merged; };
+  const reads = [];
+  const read = async ({ repo }) => { reads.push(repo); if (repo === 'argent') throw new Error('GitHub answered 403'); return merged; };
   assert.equal((await exec(oldRun, oldExtract, text, read)).code, 1);
-  assert.equal((await exec(run, extractClaims, text, read)).code, 1);
+  reads.length = 0;
+  const after = await exec(run, extractClaims, text, read);
+  assert.equal(after.code, 2);
+  assert.deepEqual(reads, ['argent']);
+  assert.ok(after.lines.includes('This run is not complete.'));
 });
-test('RED an unchanged neighbour keeps its exit: queued line beside a state', async () => {
+test('a queued line lets its neighbour claim a state, changing exit 0 to 1', async () => {
   const text = 'argent#1768 owes a review\n#12 open';
   const read = async () => merged;
-  assert.equal((await exec(oldRun, oldExtract, text, read)).code, (await exec(run, extractClaims, text, read)).code);
+  assert.equal((await exec(oldRun, oldExtract, text, read)).code, 0);
+  assert.deepEqual(said(text), ['#1768=queued', '#12=open']);
+  assert.equal((await exec(run, extractClaims, text, read)).code, 1);
 });
 test('PASS comparison: a look alone exits 0', async () => {
   assert.equal((await exec(run, extractClaims, 'argent#1768 owes a review.', async () => merged)).code, 0);

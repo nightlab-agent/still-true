@@ -191,7 +191,6 @@ function claimsFromClause(quote, line) {
 function claimsFromLine(raw, line) {
   if (/^(?: {4}|\t)/.test(raw)) return [];
   const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
-  if (body.startsWith('>')) return [];
   const claims = [];
   for (const clause of clauses(body)) {
     if (PREAMBLE.test(clause)) break;
@@ -256,6 +255,12 @@ export function extractClaims(text, _options = {}) {
       const bare = raw.replace(/<!--.*?-->/g, '');
       if (bare !== raw && !bare.trim()) continue; // A comment alone on its line is not the blank line that ends a scope.
       raw = bare;
+      if (quote === null && /^ {0,3}(?:(?:[-+*]|[0-9]+[.)])\s+)*>/.test(raw)) {
+        // End the preceding paragraph, but keep an unmarked prose continuation quoted.
+        flush();
+        paragraph.push({ claims: [], list: false, indent: Infinity, blockquote: true });
+        continue;
+      }
     }
     if (comment || raw.includes('<!--')) {
       comment = !raw.includes('-->') || raw.lastIndexOf('<!--') > raw.lastIndexOf('-->');
@@ -300,6 +305,7 @@ export function extractClaims(text, _options = {}) {
       const label = /:\s*$/.test(raw) && PREAMBLE.test(body);
       const bare = body.replace(/[*_`]/g, '');
       const item = /^\s*(?:[-+*]|[0-9]+[.)])\s+/.test(raw);
+      if (item && paragraph.at(-1)?.blockquote) flush(); // A new list is not a quote continuation.
       const colon = /:\s*$/.test(bare);
       const parent = item && colon && PLANNED.test(bare);
       // A list item that opens a current list does not silence its first child.
