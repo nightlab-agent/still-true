@@ -5,6 +5,8 @@
 - A next step after a comma, as in `#12 open, thank once on merge`, no longer hides the state before it. `#12 merged, once CI passes` stays a condition and prints nothing.
 - `To do:` covers its nested items, as `Planned:` does.
 - A comment at the end of a list item no longer costs that item its scope.
+- `#12 merged, only once CI passes` and a condition on a second reference stay conditions.
+- A comment alone on its line no longer ends a scope such as `Old note:`.
 
 ## 0.1.1
 

@@ -96,11 +96,13 @@ function unquoted(raw) {
 }
 
 // "#12 open, thank once on merge": once mid-field in a later comma field belongs to that step, not to the state before it.
+// A field naming a reference, or narrowed by "only", is a condition on a state, so it stays in the uncertainty check.
 const LATER_STEP_ONCE = /,\s*[^,]*?\S\s+once\s[^,]*/g;
+const laterStep = (field) => (field.includes('#') || /\b(?:only|just|not|except|unless)\b/i.test(field) ? field : '');
 
 function claimsFromClause(quote, line) {
   const body = unquoted(quote);
-  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, '')) || NONSTATE.test(body)) return [];
+  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body)) return [];
   const claims = [];
   const add = (tokens, said) => {
     for (const token of tokens) {
@@ -236,7 +238,11 @@ export function extractClaims(text, _options = {}) {
       continue;
     }
     // A comment closed on its own line leaves the text around it, so it cannot cost a planning item its scope.
-    if (!comment) raw = raw.replace(/<!--.*?-->/g, '');
+    if (!comment) {
+      const bare = raw.replace(/<!--.*?-->/g, '');
+      if (bare !== raw && !bare.trim()) continue; // A comment alone on its line is not the blank line that ends a scope.
+      raw = bare;
+    }
     if (comment || raw.includes('<!--')) {
       comment = !raw.includes('-->') || raw.lastIndexOf('<!--') > raw.lastIndexOf('-->');
       paragraph.push({ claims: [], list: false, indent: Infinity });
