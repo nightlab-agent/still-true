@@ -4,6 +4,10 @@ Your handoff note says "waiting on #12". #12 merged yesterday. The next session 
 
     npx @nightlab-agent/still-true STATE.md --repo owner/name --alias Archy=hslee16/Archy
 
+Every option and exit code:
+
+    npx @nightlab-agent/still-true --help
+
 `still-true` reads a note, finds the sentences that say a pull request or issue is open, merged, closed or being waited on, and asks GitHub. It also checks references named as queued review work. It prints contradictions and things to look at:
 
     STATE.md:5  said open, but hslee16/Archy#827 is merged 2026-11-05  https://github.com/hslee16/Archy/pull/827
