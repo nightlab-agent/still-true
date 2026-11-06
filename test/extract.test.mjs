@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { extractClaims } from '../src/extract.mjs';
 
 const c = (line, ref, said, quote) => ({ line, ref, said, quote });
@@ -39,17 +40,20 @@ test('a present assertion is distinct from nearby historical, planned and uncert
   }
 });
 
-test('negation and waiting never imply one of the three supported states', () => {
+test('negation never implies a state and waiting for critics stays silent', () => {
   for (const text of [
     '#12 is not merged yet.', '#12 not merged', '#12 is not open.',
     '#12 is not closed.', '#12 is never merged.', '#12 is unmerged.',
-    'Waiting on #12.', 'Waiting for #12 to merge.', 'Waiting on #12 for a response.',
+    'Waiting on #12 claims and surfaces, ccs code.',
     'Fixes #12.', 'Closes #12.', 'Reopens #12.', '#12 is pending.',
     '#12 is open or closed.', '#12 is open, not merged.',
   ]) assert.deepEqual(extractClaims(text), [], text);
   assert.deepEqual(extractClaims('#12 is still open.'), [
     c(1, { number: 12 }, 'open', '#12 is still open.'),
   ]);
+  for (const quote of ['Waiting on #12.', 'Waiting for #12 to merge.', 'Waiting on #12 for a response.']) {
+    assert.deepEqual(extractClaims(quote), [c(1, { number: 12 }, 'waiting', quote)]);
+  }
 });
 
 test('quoted wording is not the note asserting a state', () => {
@@ -90,6 +94,7 @@ test('independent list items pair current assertions with nearby nonclaims', () 
   assert.deepEqual(extractClaims(text), [
     c(1, { repo: 'Archy', number: 827 }, 'open', 'Archy#827 open'),
     c(3, { number: 12 }, 'merged', '#12 is merged.'),
+    c(7, { number: 15 }, 'waiting', 'Waiting on #15.'),
   ]);
   assert.deepEqual(extractClaims('- If CI passes:\n- #12 is merged.'), []);
   assert.deepEqual(extractClaims('- #12 is merged\n  if CI passes.'), []);
@@ -121,12 +126,95 @@ test('partial references and unsafe issue numbers cannot become different refere
   ]) assert.deepEqual(extractClaims(text), [], text);
 });
 
-test('wrapped prose and compound sentences are intentionally left unparsed', () => {
+test('wrapped prose and shared subjects are intentionally left unparsed', () => {
   for (const text of [
     'If the tests pass,\n#12 is merged.', '#12 is merged\nif the tests pass.',
-    'Yesterday:\n#12 open', '#12 open. #13 merged.', '#12 open; #13 closed.',
+    'Yesterday:\n#12 open',
     '#12 and #13 are open.', 'Old note:\n\n> #12 open',
   ]) assert.deepEqual(extractClaims(text), [], text);
+});
+
+test('independent clauses split on semicolons and sentence ends, preserving line numbers', () => {
+  const text = '- Owner/Repo.name#12 open; #13 closed. #14 merged!\n#15 open? #16 closed.';
+  assert.deepEqual(extractClaims(text), [
+    c(1, { owner: 'Owner', repo: 'Repo.name', number: 12 }, 'open', 'Owner/Repo.name#12 open'),
+    c(1, { number: 13 }, 'closed', '#13 closed.'),
+    c(1, { number: 14 }, 'merged', '#14 merged!'),
+    c(2, { number: 16 }, 'closed', '#16 closed.'),
+  ]);
+  assert.deepEqual(extractClaims('#12 open. #13 merged.'), [
+    c(1, { number: 12 }, 'open', '#12 open.'),
+    c(1, { number: 13 }, 'merged', '#13 merged.'),
+  ]);
+  assert.deepEqual(extractClaims('#12 open; #13 closed.'), [
+    c(1, { number: 12 }, 'open', '#12 open'),
+    c(1, { number: 13 }, 'closed', '#13 closed.'),
+  ]);
+});
+
+test('clause splitting does not promote quotes, examples, conditions or multiple subjects', () => {
+  for (const text of [
+    '"Old note; #12 open. #13 closed."', '`Old note; #12 open. #13 closed.`',
+    'If CI passes; #12 merged.', 'Yesterday: #12 open; #13 closed.',
+    'Old note: #12 open. #13 closed.',
+    '#12 and #13 are open; #14 and #15 closed.',
+    'Replies: #12 open, not merged.', 'Replies: #12 open, if CI passes.',
+    'Replies: #12 open to discussion.', 'Replies: #12 was closed.',
+    '#12 was merged into my local branch.',
+    'Probably #11, waits on #12.',
+    'crush has no plugin surface (crush#2038 Probably Still open).',
+  ]) assert.deepEqual(extractClaims(text), [], text);
+  assert.deepEqual(extractClaims('"Old note; #12 open."; #13 closed.'), [
+    c(1, { number: 13 }, 'closed', '#13 closed.'),
+  ]);
+  assert.deepEqual(extractClaims('#11 open; if CI passes; #12 merged.'), [
+    c(1, { number: 11 }, 'open', '#11 open'),
+  ]);
+});
+
+test('handoff status forms apply to other refs and keep secondary refs out of claims', () => {
+  const pairs = [
+    ['Other#21 abc123, one review owed, waits on Other#22.', { repo: 'Other', number: 22 }, 'waiting'],
+    ['PR Other#23 waits on its maintainer.', { repo: 'Other', number: 23 }, 'waiting'],
+    ["Other#24's held CI waits on its maintainer, nothing to push.", { repo: 'Other', number: 24 }, 'waiting'],
+    ['Replies: 2 threads updated, Other#25, no new comment or review, open, mergeable clean.', { repo: 'Other', number: 25 }, 'open'],
+    ['Other#26 MERGED 10:12Z, released as 2.3.4 with our credit.', { repo: 'Other', number: 26 }, 'merged'],
+    ['org/Other#27 closed by its maintainer as a duplicate of #28.', { owner: 'org', repo: 'Other', number: 27 }, 'closed'],
+    ['Other#29 re-checked: open, 2 comments, unassigned.', { repo: 'Other', number: 29 }, 'open'],
+    ['tool has no extension API (Other#30 Extension API open, 3 reactions).', { repo: 'Other', number: 30 }, 'open'],
+    ['Other#31 was merged 10-31 12:30 and thanked the maintainer.', { repo: 'Other', number: 31 }, 'merged'],
+  ];
+  for (const [quote, ref, said] of pairs) assert.deepEqual(extractClaims(quote), [c(1, ref, said, quote)], quote);
+});
+
+test('real handoff matches all twelve hand labels and leaves twelve other entries silent', async (t) => {
+  const [text, labels] = await Promise.all([
+    readFile(new URL('./fixtures/real-handoff.md', import.meta.url), 'utf8'),
+    readFile(new URL('./fixtures/real-handoff.expected.json', import.meta.url), 'utf8'),
+  ]);
+  const { claims: expected } = JSON.parse(labels);
+  // The labels use list entry numbers; extraction reports physical Markdown lines.
+  const entries = text.split(/\r\n|\n|\r/).flatMap((raw, index) => {
+    const match = /^(\d+)\. /.exec(raw);
+    return match ? [{ entry: match[1], line: index + 1 }] : [];
+  });
+  assert.equal(entries.length, 24);
+  assert.equal(Object.keys(expected).length, 12);
+  const claims = extractClaims(text);
+  const name = ({ owner, repo, number }) => `${owner ? `${owner}/` : ''}${repo ?? ''}#${number}`;
+  let recall = 0, falseClaims = 0;
+  for (const { entry, line } of entries) {
+    const actual = claims.filter((claim) => claim.line === line).map(({ ref, said }) => ({ ref: name(ref), said }));
+    if (expected[entry]) {
+      if (actual.length === 1 && actual[0].ref === expected[entry].ref && actual[0].said === expected[entry].said) recall++;
+    } else falseClaims += actual.length;
+  }
+  t.diagnostic(`recall: ${recall}/12; false claims: ${falseClaims}/12 silent entries`);
+  for (const { entry, line } of entries) {
+    assert.deepEqual(claims.filter((claim) => claim.line === line).map(({ ref, said }) => ({ ref: name(ref), said })),
+      expected[entry] ? [expected[entry]] : [], `entry ${entry}, Markdown line ${line}`);
+  }
+  assert.equal(claims.length, 12);
 });
 
 test('historical, planned and unknown Markdown sections do not supply present claims', () => {
