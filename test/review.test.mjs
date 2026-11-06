@@ -102,41 +102,41 @@ const cli = (note, ...args) => {
   const d = mkdtempSync(join(tmpdir(), 'st-')); const f = join(d, 'n.md'); writeFileSync(f, note);
   return spawnSync('node', [bin, f, ...args], { encoding: 'utf8', cwd: d, env: { PATH: process.env.PATH } });
 };
-test.todo('comparison: an unknown short name exits 0 with not checked (deferred: CLI alias lookup is outside the six parser fixes.)', () => {
+test('comparison: an unknown short name exits 0 with not checked', () => {
   const r = cli('Archy#12 is open\n', '--repo', 'a/b');
   assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /not checked/);
 });
-test.todo('review: a short name equal to an Object member exits 0 with not checked (deferred: CLI alias lookup is outside the six parser fixes.)', () => {
+test('review: a short name equal to an Object member exits 0 with not checked', () => {
   const r = cli('constructor#12 is open\n', '--repo', 'a/b');
   assert.equal(r.status, 0, r.stderr.slice(0, 300)); assert.match(r.stdout, /not checked/);
 });
-test.todo('review: an unreadable second file after a contradiction exits 1, as a failed read does (deferred: CLI read failure handling is outside the six parser fixes.)', async () => {
+test('review: an unreadable second file after a contradiction exits 1, as a failed read does', async () => {
   const r = await go('', MERGED, { files: { 'a.md': '#12 is open\n', 'b.md': null } });
   assert.equal(r.code, 1, r.text);
 });
-test.todo('comparison: repoFromRemote refuses another host (deferred: Remote URL validation is outside the six parser fixes.)', () => assert.equal(repoFromRemote('https://gitlab.com/a/b.git'), null));
-test.todo('review: repoFromRemote refuses a look-alike host (deferred: Remote URL validation is outside the six parser fixes.)', () => {
+test('comparison: repoFromRemote refuses another host', () => assert.equal(repoFromRemote('https://gitlab.com/a/b.git'), null));
+test('review: repoFromRemote refuses a look-alike host', () => {
   assert.equal(repoFromRemote('https://notgithub.com/a/b.git'), null);
   assert.equal(repoFromRemote('https://gitlab.com/group/github.com/a/b.git'), null);
 });
-test.todo('review: a 200 with no state is not a contradiction (deferred: GitHub response validation is outside the six parser fixes.)', async () => {
+test('review: a 200 with no state is not a contradiction', async () => {
   const real = await readState({ owner: 'a', repo: 'b', number: 1 }, { fetchFn: async () => ({ status: 200, ok: true, json: async () => ({}) }) }).catch(() => null);
   assert.notEqual(real && compare({ said: 'open' }, real).verdict, 'contradicted');
 });
-test.todo('review: an alias with no slash is refused, not reported as GitHub having no such issue (deferred: CLI alias validation is outside the six parser fixes.)', async () => {
+test('review: an alias with no slash is refused, not reported as GitHub having no such issue', async () => {
   const o = [];
   await run(['n.md', '--alias', 'A=foo'], { out: (s) => o.push(s), extract: extractClaims, readFile: async () => 'A#1 is open\n',
     read: async () => null, defaultRepo: null, env: {} });
   assert.doesNotMatch(o.join('\n'), /undefined/);
 });
 // Pass-expected hunts
-test.todo('hunt: two spellings of one PR cost one request and agree (deferred: Reader caching is outside the six parser fixes.)', async () => {
+test('hunt: two spellings of one PR cost one request and agree', async () => {
   let n = 0; const o = [];
   const code = await run(['n.md'], { out: (s) => o.push(s), extract: extractClaims, readFile: async () => 'Foo/Bar#1 is open\n\nfoo/bar#1 is open\n\nFOO/BAR#1 is merged\n',
     read: async () => { n++; return MERGED; }, defaultRepo: null, env: {} });
   assert.equal(n, 1); assert.equal(code, 1); assert.match(o.join('\n'), /3 claims checked, 2 contradicted/);
 });
-test.todo('hunt: a 404 is cached, not re-read (deferred: Reader caching is outside the six parser fixes.)', async () => {
+test('hunt: a 404 is cached, not re-read', async () => {
   let n = 0;
   await run(['n.md', '--repo', 'a/b'], { out() {}, extract: extractClaims, readFile: async () => '#1 is open\n\n#1 is merged\n', read: async () => { n++; return null; }, env: {} });
   assert.equal(n, 1);

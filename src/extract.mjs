@@ -188,7 +188,10 @@ export function extractClaims(text, _options = {}) {
     // A wrapped condition, quotation or historical preamble can change the
     // following line. Separate list items may contain independent nonclaims.
     const blocks = (entry) => entry && !entry.claims.length && !entry.list;
+    // A historical label ("Old note:") covers the whole list under it.
+    const old = paragraph.findIndex((entry) => !entry.list && !entry.claims.length && entry.label);
     paragraph.forEach((entry, i) => {
+      if (old >= 0 && i > old && entry.list) return;
       if (!blocks(paragraph[i - 1]) && !blocks(paragraph[i + 1])) claims.push(...entry.claims);
     });
     paragraph = [];
@@ -246,7 +249,8 @@ export function extractClaims(text, _options = {}) {
       const readable = sections.every((section, i) => section.current || (section.level === 1 && i < sections.length - 1));
       const claims = readable ? claimsFromLine(raw, index + 1) : [];
       const list = /^ {0,3}(?:[-+*]|[0-9]+[.)])\s+/.test(raw) && !/:\s*$/.test(raw);
-      paragraph.push({ claims, list });
+      const label = /:\s*$/.test(raw) && PREAMBLE.test(raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, ''));
+      paragraph.push({ claims, list, label });
     }
   }
   flush();

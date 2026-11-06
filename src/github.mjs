@@ -21,6 +21,7 @@ export async function readState({ owner, repo, number }, { fetchFn = fetch, toke
     throw new Error(`GitHub answered ${res.status} for ${owner}/${repo}#${number}: ${body.message ?? 'no reason given'}`);
   }
   const d = await res.json();
+  if (d.state !== 'open' && d.state !== 'closed') throw new Error(`GitHub gave no state for ${owner}/${repo}#${number}`);
   const url = d.html_url;
   if (d.pull_request) {
     const merged = d.pull_request.merged_at;
