@@ -1,7 +1,7 @@
 // Recognize explicit assertions and a small set of handoff status forms.
 const STATEMENT = /^(?:(?:PR|issue|pull request)\s+)?(\S+?)(?:\s+(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently)\s+)?|:\s*)(open|merged|closed)(?:\s+now)?[.!]?$/i;
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
-const CURRENT_HEADING = /^(?:handoff|state|status|now|current(?: status| state)?)$/i;
+const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
 const LABEL = /^(?:open PRs(?: followed up)?|replies(?: check)?|status|now):\s*/i;
 const METADATA = /^(?:,\s*(?:clean|mergeable clean|head [a-f0-9]+|no change since \d{2}:\d{2}Z|\d+ (?:comments|reactions)|unassigned|released as \d[\w.-]*(?: with our credit)?))*$/i;
 const PREAMBLE = /^(?:if|unless|when|yesterday|old note|example|suppose|imagine)\b/i;

@@ -270,3 +270,10 @@ test('repeated and interleaved calls are independent and returned objects are fr
   results[0][0].ref.number = 99;
   assert.deepEqual(extractClaims(text), expected);
 });
+
+test('a current heading may carry a note after its first word', () => {
+  assert.deepEqual(extractClaims('# State\n\n## Now (handoff, ten lines)\n\n#12 open'), [c(5, { number: 12 }, 'open', '#12 open')]);
+  assert.deepEqual(extractClaims('## Status: Friday\n\n#12 open'), [c(3, { number: 12 }, 'open', '#12 open')]);
+  assert.deepEqual(extractClaims('## Nowhere\n\n#12 open'), []);
+  assert.deepEqual(extractClaims('## Stately plans\n\n#12 open'), []);
+});
