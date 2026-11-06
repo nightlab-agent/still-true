@@ -1,11 +1,22 @@
-// Recognize explicit assertions and a small set of handoff status forms.
-const STATEMENT = /^(?:(?:PR|issue|pull request)\s+)?(\S+?)(?:\s+(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently)\s+)?|:\s*)(open|merged|closed)(?:\s+now)?[.!]?$/i;
+// Six grammar rules, shared by bare statements, labelled lists and fact fields.
+const TOKEN = '[a-z0-9_./-]*#[a-z0-9_.-]+';
+const SUBJECT = new RegExp(`^((?:[^#]*\\s)?)(${TOKEN}(?:\\s+and\\s+${TOKEN})*)(.*)$`, 'i');
+const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|already|was(?=\s+merged\b)|(?:PR|issue)(?:\s+is)?)\s+)?(open|merged|closed)\b(?!-)(.*)$/i;
+const BEFORE_REF = new RegExp(`\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
+const COUNT_STATE = /^\d+\s+(open|merged|closed)$/i;
+const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|(?:its|the) maintainer)(?:\\s+(?:to merge|for a response))?$`, 'i');
+const LABEL_LIST = new RegExp(`(?:^|:\\s*)(open|merged|closed)(?:\\s+(?:PRs|issues|pull requests))?:\\s*(${TOKEN}(?:\\s*(?:,|and)\\s*${TOKEN})*)$`, 'i');
+
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
 const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
-const LABEL = /^(?:open PRs(?: followed up)?|replies(?: check)?|status|now):\s*/i;
-const METADATA = /^(?:,\s*(?:clean|mergeable clean|head [a-f0-9]+|no change since \d{2}:\d{2}Z|\d+ (?:comments|reactions)|unassigned|released as \d[\w.-]*(?: with our credit)?))*$/i;
 const PREAMBLE = /^(?:if|unless|when|yesterday|old note|example|suppose|imagine)\b/i;
-const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless)\b/i;
+const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|think|believe)\b/i;
+const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|already)\s+)?(?:open|merged|closed)|(?:was|were|used to be)\s+(?:(?:still|currently|already)\s+)?(?:open|closed)|(?:open|merged|closed)\s+or\s+(?:open|merged|closed))\b/i;
+const QUALIFIED_STATE = /^\s+(?:to|into|for|or)\b/i;
+// Subjects may have a noun label or a possessive determiner, but objects of
+// phrases such as "a PR for issue #12" are not the subject of that PR's state.
+const SUBJECT_PREFIX = /^(?:(?:PR|issue|pull request)|(?:[\w'-]+\s+)+(?:PR|issue|pull request)|(?:the\s+)?[\w-]+['’]s|(?:my|our|your|their|his|her|its)(?:\s+own)?)?$/i;
+const OBJECT_PREFIX = /\b(?:for|of|on|about)\b/i;
 
 function nextQuote(raw, i, quote) {
   const pairs = { '"': '"', "'": "'", '“': '”', '‘': '’' };
@@ -56,41 +67,90 @@ function makeClaim(token, said, quote, line) {
   return { line, ref, said: said.toLowerCase(), quote: [...quote].slice(0, 160).join('') };
 }
 
-function claimFromClause(quote, line) {
-  const statement = STATEMENT.exec(quote);
-  if (statement) return makeClaim(statement[1], statement[2], quote, line);
-  if (quote.includes('?') || UNCERTAIN.test(quote)) return null;
-  let body = quote.replace(/[.!]$/, '').replace(LABEL, '');
-  // A status inside a trailing parenthesis still names its own subject.
-  const parenthetical = /^[\w.-]+ has no [\w ]+ \(([^()]+)\)$/.exec(body);
-  if (parenthetical) body = parenthetical[1];
-  // The dependency can follow an update about a different PR. Capture only
-  // the target of an explicit wait, never infer a state for the earlier ref.
-  const waiting = /(?:^|,\s*)(?:waits?|waiting)\s+(?:on|for)\s+(\S+?)(?:\s+(?:to merge|for a response))?$/i.exec(body);
-  if (waiting) return makeClaim(waiting[1], 'waiting', quote, line);
-  const refs = [...body.matchAll(/[a-z0-9_./-]*#[a-z0-9_.-]+/gi)];
-  if (!refs.length) return null;
-  const [subject] = refs;
-  const before = body.slice(0, subject.index).trim();
-  const after = body.slice(subject.index + subject[0].length).trim();
-  if (!/^(?:PR|issue|pull request|\d+ threads? updated,)?$/i.test(before)) return null;
-  if (refs.length === 1 && /^(?:['’]s held CI\s+)?waits on (?:its|the) maintainer(?:, nothing to push)?$/i.test(after)) {
-    return makeClaim(subject[0], 'waiting', quote, line);
+// Mask quotations and inline code before looking for facts inside parentheses.
+function unquoted(raw) {
+  let result = '', quote = null, code = null;
+  for (let i = 0; i < raw.length; i++) {
+    if (!quote && raw[i] === '`') {
+      const run = /^`+/.exec(raw.slice(i))[0];
+      if (!code) code = run;
+      else if (code === run) code = null;
+      result += ' '.repeat(run.length);
+      i += run.length - 1;
+      continue;
+    }
+    if (code) { result += ' '; continue; }
+    const previous = quote;
+    quote = nextQuote(raw, i, quote);
+    result += previous || quote ? ' ' : raw[i];
   }
-  // A duplicate target is an object of the closure reason, not another claim.
-  const duplicate = /^closed by (?:its|the) maintainer as a duplicate of (\S+)$/i.exec(after);
-  if (duplicate && refs.length === 2 && REF.test(duplicate[1])) return makeClaim(subject[0], 'closed', quote, line);
-  if (refs.length !== 1) return null;
-  // A dated merge records the completed transition, including retrospective notes.
-  if (/^(?:was )?merged \d{2}-\d{2}(?: \d{2}:\d{2})?(?: and .+)?$/i.test(after)) {
-    return makeClaim(subject[0], 'merged', quote, line);
+  return result;
+}
+
+function claimsFromClause(quote, line) {
+  const body = unquoted(quote);
+  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body) || NONSTATE.test(body)) return [];
+  const claims = [];
+  const add = (tokens, said) => {
+    for (const token of tokens) {
+      const claim = makeClaim(token, said, quote, line);
+      if (claim && !claims.some((c) => c.said === claim.said &&
+        c.ref.owner === claim.ref.owner && c.ref.repo === claim.ref.repo && c.ref.number === claim.ref.number)) claims.push(claim);
+    }
+  };
+  const labelled = LABEL_LIST.exec(body.trim().replace(/[.!]$/, ''));
+  if (labelled) add([...labelled[2].matchAll(new RegExp(TOKEN, 'gi'))].map((m) => m[0]), labelled[1]);
+  let context = { subjects: [], list: false, label: false, state: null, hadRef: false };
+  const stack = [];
+  // Commas separate facts; parentheses scope them. Neither needs a vocabulary
+  // of comment counts, timestamps, release credits or other incidental facts.
+  for (const field of body.matchAll(/([^(),:]*)([(),:]|$)/g)) {
+    const text = field[1].trim().replace(/[.!]$/, '');
+    const delimiter = field[2];
+    const bareState = STATE.exec(text);
+    const subject = bareState ? null : SUBJECT.exec(text);
+    let tail = text;
+    if (subject) {
+      context.hadRef = true;
+      const prefix = subject[1].trim();
+      const tokens = subject[2].split(/\s+and\s+/i);
+      if (SUBJECT_PREFIX.test(prefix) && !OBJECT_PREFIX.test(prefix) &&
+          (tokens.length === 1 || context.label || context.state)) {
+        context.subjects = context.list ? [...context.subjects, ...tokens] : tokens;
+        tail = subject[3].trim();
+        context.list = !tail && (context.label || stack.length > 0 || context.state !== null);
+        if (context.state && !tail) add(tokens, context.state);
+      } else {
+        context.subjects = [];
+        context.list = false;
+      }
+    }
+    // An issue title within a parenthetical fact may sit between REF and STATE.
+    const statusText = subject && stack.length ? tail.replace(/^(?:[A-Z][\w-]*\s+)+(?=(?:open|merged|closed)\b)/, '') : tail;
+    const state = bareState ?? STATE.exec(statusText);
+    if (state && !QUALIFIED_STATE.test(state[2])) {
+      add(context.subjects, state[1]);
+      context.list = false;
+    }
+    const waiting = WAIT.exec(tail);
+    if (waiting) add(REF.test(waiting[1]) ? [waiting[1]] : context.subjects, 'waiting');
+    const before = BEFORE_REF.exec(text);
+    if (before && (!subject || before.index < subject[1].length) &&
+        (before[1].toLowerCase() !== 'open' || before[2]) && !QUALIFIED_STATE.test(before[4])) add([before[3]], before[1]);
+    if (delimiter === ':') context.label = true;
+    if (delimiter === '(') {
+      const count = COUNT_STATE.exec(text);
+      stack.push(context);
+      context = { subjects: [...context.subjects], list: false, label: context.label,
+        state: count ? count[1] : null, hadRef: false };
+    } else if (delimiter === ')' && stack.length) {
+      const child = context;
+      context = stack.pop();
+      // A ref inside parentheses interrupts the inherited subject's fact chain.
+      if (child.hadRef) { context.subjects = []; context.list = false; context.hadRef = true; }
+    }
   }
-  // In a parenthesis, a capitalized issue title can precede the status.
-  const statusText = parenthetical ? after.replace(/^(?:[A-Z][\w-]*\s+)+(?=(?:open|merged|closed)\b)/, '') : after;
-  const status = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently)\s+|:\s*|re-checked:\s*|,\s*no new comment or review,\s*)?(open|merged|closed)(.*)$/i.exec(statusText);
-  if (!status) return null;
-  const metadata = status[2].replace(/^ \d{2}:\d{2}Z/i, '');
-  return METADATA.test(metadata) ? makeClaim(subject[0], status[1], quote, line) : null;
+  return claims;
 }
 
 function claimsFromLine(raw, line) {
@@ -99,8 +159,7 @@ function claimsFromLine(raw, line) {
   const claims = [];
   for (const clause of clauses(body)) {
     if (PREAMBLE.test(clause)) break;
-    const claim = claimFromClause(clause, line);
-    if (claim) claims.push(claim);
+    claims.push(...claimsFromClause(clause, line));
   }
   return claims;
 }

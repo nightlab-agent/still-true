@@ -19,7 +19,6 @@ test('a present assertion is distinct from nearby historical, planned and uncert
   const pairs = [
     ['#12 is open.', '#12 was open when I started.'],
     ['#12 is open.', '#12 used to be open.'],
-    ['#12 is merged.', '#12 merged yesterday.'],
     ['#12 is closed.', '#12 was closed.'],
     ['#12 merged', 'Merge #12 today.'],
     ['#12 closed', 'Closing #12 today.'],
@@ -187,10 +186,10 @@ test('handoff status forms apply to other refs and keep secondary refs out of cl
   for (const [quote, ref, said] of pairs) assert.deepEqual(extractClaims(quote), [c(1, ref, said, quote)], quote);
 });
 
-test('real handoff matches all twelve hand labels and leaves twelve other entries silent', async (t) => {
+for (const fixture of ['real-handoff', 'real-handoff-2']) test(`${fixture} matches the hand labels`, async (t) => {
   const [text, labels] = await Promise.all([
-    readFile(new URL('./fixtures/real-handoff.md', import.meta.url), 'utf8'),
-    readFile(new URL('./fixtures/real-handoff.expected.json', import.meta.url), 'utf8'),
+    readFile(new URL(`./fixtures/${fixture}.md`, import.meta.url), 'utf8'),
+    readFile(new URL(`./fixtures/${fixture}.expected.json`, import.meta.url), 'utf8'),
   ]);
   const { claims: expected } = JSON.parse(labels);
   // The labels use list entry numbers; extraction reports physical Markdown lines.
@@ -198,23 +197,87 @@ test('real handoff matches all twelve hand labels and leaves twelve other entrie
     const match = /^(\d+)\. /.exec(raw);
     return match ? [{ entry: match[1], line: index + 1 }] : [];
   });
-  assert.equal(entries.length, 24);
-  assert.equal(Object.keys(expected).length, 12);
   const claims = extractClaims(text);
+  assert.ok(claims.every((claim) => entries.some((entry) => entry.line === claim.line)), 'claims belong to numbered entries');
   const name = ({ owner, repo, number }) => `${owner ? `${owner}/` : ''}${repo ?? ''}#${number}`;
-  let recall = 0, falseClaims = 0;
+  const optional = fixture === 'real-handoff' ? {} : {
+    2: [{ ref: 'Archy#679', said: 'merged' }, { ref: 'cost-guard#6', said: 'merged' }],
+    8: [{ ref: 'claude-code#6915', said: 'closed' }, { ref: '#7328', said: 'closed' }],
+    12: [{ ref: 'agentbridge#1169', said: 'waiting' }],
+    29: [],
+  };
+  let matched = 0, total = 0, falseClaims = 0, silent = 0, optionalClaims = 0;
   for (const { entry, line } of entries) {
     const actual = claims.filter((claim) => claim.line === line).map(({ ref, said }) => ({ ref: name(ref), said }));
-    if (expected[entry]) {
-      if (actual.length === 1 && actual[0].ref === expected[entry].ref && actual[0].said === expected[entry].said) recall++;
-    } else falseClaims += actual.length;
+    const label = expected[entry];
+    if (label === 'either') {
+      optionalClaims += actual.length;
+      await t.test(`entry ${entry}: optional`, () => {
+        assert.deepEqual(actual, actual.length ? optional[entry] : []);
+      });
+      continue;
+    }
+    const wanted = label ? (Array.isArray(label) ? label : [label]) : [];
+    total += wanted.length;
+    matched += wanted.filter((claim) => actual.some((a) => a.ref === claim.ref && a.said === claim.said)).length;
+    falseClaims += actual.filter((claim) => !wanted.some((w) => w.ref === claim.ref && w.said === claim.said)).length;
+    if (!wanted.length) silent++;
+    await t.test(`entry ${entry}, Markdown line ${line}`, () => assert.deepEqual(actual, wanted));
   }
-  t.diagnostic(`recall: ${recall}/12; false claims: ${falseClaims}/12 silent entries`);
-  for (const { entry, line } of entries) {
-    assert.deepEqual(claims.filter((claim) => claim.line === line).map(({ ref, said }) => ({ ref: name(ref), said })),
-      expected[entry] ? [expected[entry]] : [], `entry ${entry}, Markdown line ${line}`);
+  t.diagnostic(`required claims: ${matched}/${total}; false claims: ${falseClaims}; silent entries: ${silent}; optional claims: ${optionalClaims}`);
+});
+
+test('generic state forms accept new facts, labels and reference lists', () => {
+  const cases = [
+    ['#21 merged yesterday.', ['#21'], 'merged'],
+    ['Queue: 3 open (org/Tool#21, Other#22, #23).', ['org/Tool#21', 'Other#22', '#23'], 'open'],
+    ['Review sweep: #21 and #22 open, 7 approvals, labels triaged.', ['#21', '#22'], 'open'],
+    ['Checks: #21, #22, open, assigned to someone new.', ['#21', '#22'], 'open'],
+    ['Merged PRs: org/Tool#21, Other#22 and #23.', ['org/Tool#21', 'Other#22', '#23'], 'merged'],
+    ['Triage: Closed issues: #21, #22.', ['#21', '#22'], 'closed'],
+    ['Widget is unavailable (Other#21 Extension Hooks open, 9 watchers).', ['Other#21'], 'open'],
+    ['#21 (new title, 9 watchers) is still open, last read Tuesday.', ['#21'], 'open'],
+    ['#21, checked on Tuesday, assigned to a reviewer, open.', ['#21'], 'open'],
+    ["The team's Other#21 status matches upstream (merged last Tuesday by a reviewer).", ['Other#21'], 'merged'],
+    ['Triage: open issue #21 needs another reviewer.', ['#21'], 'open'],
+    ['Update: #20 rebased, waiting for #21.', ['#21'], 'waiting'],
+  ];
+  const name = ({ owner, repo, number }) => `${owner ? `${owner}/` : ''}${repo ?? ''}#${number}`;
+  for (const [quote, refs, said] of cases) {
+    assert.deepEqual(extractClaims(quote).map((claim) => [name(claim.ref), claim.said]), refs.map((ref) => [ref, said]), quote);
   }
-  assert.equal(claims.length, 12);
+});
+
+test('generic forms keep state scope, word boundaries and nonclaims intact', () => {
+  for (const text of [
+    'Queue: #21 opened yesterday.',
+    'Queue: #21 (was open when I started).',
+    'Queue: #21, was open when I started.',
+    'Queue: #21 (not merged yet).',
+    'Queue: #21, probably open.',
+    'Queue: #21, open if tests pass.',
+    'Queue: 2 open (a//b#21, #01).',
+    'Queue: 2 open ("#21", `#22`).',
+    'A widget is open, see #21.',
+    '#21 (see #22) open.',
+    'Queue: #21, #22 opened yesterday.',
+    'Queue: #21 (merged into my local branch).',
+    'Queue: #21 is open-source.',
+    'Queue: was still open PR #21 when I started.',
+    'Queue: not yet merged #21.',
+    'Open PRs: #21, #22 opened today.',
+    'Open PRs: #21, #22 all waiting on maintainers.',
+    'Merged #21 into my local branch.',
+    'Open #21 today.',
+  ]) assert.deepEqual(extractClaims(text), [], text);
+  assert.deepEqual(extractClaims('#21 closed as a duplicate of #22.').map(({ ref, said }) => ({ ref, said })), [
+    { ref: { number: 21 }, said: 'closed' },
+  ]);
+  assert.deepEqual(extractClaims('Sweep: #21, #22, open, #23 closed.').map(({ ref, said }) => ({ ref, said })), [
+    { ref: { number: 21 }, said: 'open' },
+    { ref: { number: 22 }, said: 'open' },
+    { ref: { number: 23 }, said: 'closed' },
+  ]);
 });
 
 test('historical, planned and unknown Markdown sections do not supply present claims', () => {
@@ -242,13 +305,14 @@ test('quotation and comment blocks remain nonclaims across blank lines', () => {
 });
 
 // Actual handoff excerpts supplied on Rick's board. These are not a STATE fixture.
-test('supplied real board excerpts contain no supported present state assertion', () => {
+test('supplied real board excerpts distinguish quoted assumptions, merge reports and nonstates', () => {
   const samples = [
     "Expired assumption: 'Archy#827 open' and with it 'open 5/5' and 'next slot'.",
-    'Your Archy#827 work news: #827 merged 11-05, and I thanked hslee16 once at 00:08.',
     '#797 is rebased, your review job ar797-rev is queued.',
   ];
   for (const sample of samples) assert.deepEqual(extractClaims(sample), [], sample);
+  const merged = 'Your Archy#827 work news: #827 merged 11-05, and I thanked hslee16 once at 00:08.';
+  assert.deepEqual(extractClaims(merged), [c(1, { number: 827 }, 'merged', merged)]);
 });
 
 test('quotes preserve Unicode whitespace and are capped at 160 characters', () => {
@@ -259,10 +323,13 @@ test('quotes preserve Unicode whitespace and are capped at 160 characters', () =
 });
 
 test('repeated and interleaved calls are independent and returned objects are fresh', async () => {
-  const text = '#12 open\nArchy#13 merged';
+  const text = '#12 open\nSweep: Archy#13, #14, merged.\n2 open (Tool#15, #16)';
   const expected = [
     c(1, { number: 12 }, 'open', '#12 open'),
-    c(2, { repo: 'Archy', number: 13 }, 'merged', 'Archy#13 merged'),
+    c(2, { repo: 'Archy', number: 13 }, 'merged', 'Sweep: Archy#13, #14, merged.'),
+    c(2, { number: 14 }, 'merged', 'Sweep: Archy#13, #14, merged.'),
+    c(3, { repo: 'Tool', number: 15 }, 'open', '2 open (Tool#15, #16)'),
+    c(3, { number: 16 }, 'open', '2 open (Tool#15, #16)'),
   ];
   assert.deepEqual(extractClaims(text), expected);
   const results = await Promise.all([text, '', text].map(async (t) => extractClaims(t)));
