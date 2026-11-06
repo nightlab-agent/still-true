@@ -313,6 +313,10 @@ export function extractClaims(text, options = {}) {
       const bare = body.replace(/[*_`]/g, '');
       const item = /^\s*(?:[-+*]|[0-9]+[.)])\s+/.test(raw);
       if (item && paragraph.at(-1)?.blockquote) flush(true); // A new list is not a quote continuation.
+      if (!item && paragraph.at(-1)?.blockquote) { // Every unmarked line of a quoted paragraph stays in the quote.
+        paragraph.push({ claims: [], list: false, indent: Infinity, blockquote: true });
+        continue;
+      }
       const colon = /:\s*$/.test(bare);
       const parent = item && colon && PLANNED.test(bare);
       // A list item that opens a current list does not silence its first child.

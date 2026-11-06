@@ -93,3 +93,10 @@ test('F1 and F2 stay silent in text and JSON while their controls still contradi
     }
   }
 });
+
+test('every lazy line of a quote stays quoted, a list after it does not', () => {
+  assert.deepEqual(extractClaims('Old note:\n> context\n#1 open\n#2 open'), []);
+  assert.deepEqual(extractClaims('> context\n#1 open\n#2 open\n#3 open'), []);
+  assert.deepEqual(extractClaims('> context\nlazy continuation\n- #1 open').map(({ said }) => said), ['open']);
+  assert.deepEqual(extractClaims('> context\n\n#1 open').map(({ said }) => said), ['open']);
+});
