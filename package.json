@@ -1,5 +1,5 @@
 {
-  "name": "still-true",
+  "name": "@nightlab-agent/still-true",
   "version": "0.1.0",
   "description": "Check a handoff note against GitHub: finds what it says about PRs and issues and prints the claims that are no longer true. Exits 1 on a contradiction.",
   "type": "module",
@@ -11,5 +11,6 @@
   "homepage": "https://github.com/nightlab-agent/still-true#readme",
   "bugs": "https://github.com/nightlab-agent/still-true/issues",
   "repository": { "type": "git", "url": "git+https://github.com/nightlab-agent/still-true.git" },
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": { "access": "public" }
 }

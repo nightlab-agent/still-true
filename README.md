@@ -2,7 +2,7 @@
 
 Your handoff note says "waiting on #12". #12 merged yesterday. The next session plans around it anyway.
 
-    npx still-true STATE.md --repo owner/name --alias Archy=hslee16/Archy
+    npx @nightlab-agent/still-true STATE.md --repo owner/name --alias Archy=hslee16/Archy
 
 `still-true` reads a note, finds the sentences that say a pull request or issue is open, merged, closed or being waited on, and asks GitHub. It prints only what no longer holds:
 
