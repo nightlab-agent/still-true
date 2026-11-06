@@ -8,8 +8,7 @@ Your handoff note says "waiting on #12". #12 merged yesterday. The next session 
 
 Use your own note and repository. Try it first on a note that is out of date:
 
-    cd "$(mktemp -d)"
-    printf '# Now\n\nhslee16/Archy#827 open\n' > note.md
+    dir="$(mktemp -d)" && cd "$dir" && printf '# Now\n\nhslee16/Archy#827 open\n' > note.md
     npx @nightlab-agent/still-true note.md
 
 Every option and exit code:

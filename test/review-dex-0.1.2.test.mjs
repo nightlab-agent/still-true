@@ -1,14 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const RULE = /every heading above it, apart from the file's title,/;
 
-test('the try-it lines cannot overwrite a note.md already in the folder', async () => {
-  const readme = await readFile('README.md', 'utf8');
-  const printf = readme.split('\n').findIndex((line) => line.includes("printf '# Now"));
-  assert.ok(printf > 0);
-  assert.match(readme.split('\n')[printf - 1], /cd "\$\(mktemp -d\)"/);
+function tryItLine(readme) {
+  const line = readme.split('\n').find((l) => l.includes("printf '# Now"));
+  assert.ok(line);
+  return line.trim();
+}
+
+for (const shell of ['sh', 'bash']) {
+  test(`${shell}: the try-it line cannot overwrite a note.md, even when the temporary folder cannot be made`, async () => {
+    const line = tryItLine(await readFile('README.md', 'utf8'));
+    const home = await mkdtemp(join(tmpdir(), 'st-tryit-'));
+    await writeFile(join(home, 'note.md'), 'my existing work');
+    spawnSync(shell, ['-c', line], { cwd: home, env: { ...process.env, TMPDIR: join(home, 'missing') } });
+    assert.equal(await readFile(join(home, 'note.md'), 'utf8'), 'my existing work');
+  });
+}
+
+test('the try-it line still writes the sample into a new folder', async () => {
+  const line = tryItLine(await readFile('README.md', 'utf8'));
+  const home = await mkdtemp(join(tmpdir(), 'st-tryit-'));
+  await writeFile(join(home, 'note.md'), 'my existing work');
+  const out = spawnSync('sh', ['-c', `${line} && pwd && cat note.md`], { cwd: home, encoding: 'utf8', env: { ...process.env, TMPDIR: home } });
+  assert.equal(out.status, 0);
+  assert.notEqual(out.stdout.split('\n')[0], home);
+  assert.match(out.stdout, /hslee16\/Archy#827 open/);
+  assert.equal(await readFile(join(home, 'note.md'), 'utf8'), 'my existing work');
 });
 
 test('the skip rule names the title exception, in the line and the changelog', async () => {
