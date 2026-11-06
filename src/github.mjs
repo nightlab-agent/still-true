@@ -4,7 +4,7 @@ const API = 'https://api.github.com';
 export function resolveRef(ref, { defaultRepo, aliases = {} } = {}) {
   if (ref.owner) return ref;
   const full = ref.repo
-    ? aliases[ref.repo] ?? (defaultRepo?.split('/')[1] === ref.repo ? defaultRepo : null)
+    ? (Object.hasOwn(aliases, ref.repo) ? aliases[ref.repo] : null) ?? (defaultRepo?.split('/')[1] === ref.repo ? defaultRepo : null)
     : defaultRepo;
   if (!full) return null;
   const [owner, repo] = full.split('/');
