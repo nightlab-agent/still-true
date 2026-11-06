@@ -91,7 +91,8 @@ export async function run(argv, deps) {
 
   if (failure) {
     out(`stopped: ${failure}`);
-    out('This run is not complete. Set GITHUB_TOKEN for a higher rate limit, or try again later.');
+    out('This run is not complete.');
+    if (/rate limit/i.test(failure)) out('Set GITHUB_TOKEN for a higher rate limit, or try again later.');
     // Node's fetch ignores proxy settings unless told otherwise.
     if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) out('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
     return contradicted ? 1 : 2;

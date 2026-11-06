@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { run, repoFromRemote, parseArgs } from '../src/cli.mjs';
+import { readState } from '../src/github.mjs';
 
 const claims = (list) => () => list;
 const c = (line, ref, said) => ({ line, ref, said, quote: `q${line}` });
@@ -51,6 +52,22 @@ test('a read failure stops with exit 2 and never reads as clean', async () => {
   assert.match(o.join('\n'), /rate limit/);
   assert.doesNotMatch(o.join('\n'), /0 contradicted/);
 });
+for (const [status, message] of [[401, 'Bad credentials'], [403, 'API rate limit exceeded']]) {
+  test(`GitHub ${status}: rate-limit advice is only given for a rate-limit failure`, async () => {
+    const { out, o } = io();
+    const code = await run(['h.md', '--repo', 'a/b'], { ...base, out, env: {},
+      extract: claims([c(1, { number: 12 }, 'open')]),
+      read: (ref, options) => readState(ref, { ...options,
+        fetchFn: async () => ({ status, ok: false, json: async () => ({ message }) }),
+      }),
+    });
+    assert.equal(code, 2);
+    const output = o.join('\n');
+    assert.match(output, new RegExp(`GitHub answered ${status}`));
+    assert.match(output, /This run is not complete\./);
+    assert.equal(output.includes('Set GITHUB_TOKEN for a higher rate limit'), status === 403);
+  });
+}
 test('a contradiction found before a read failure still exits 1 and prints', async () => {
   const { out, o } = io(); let n = 0;
   const code = await run(['h.md', '--repo', 'a/b'], { ...base, out, extract: claims([c(1, { number: 1 }, 'open'), c(2, { number: 2 }, 'open')]),
