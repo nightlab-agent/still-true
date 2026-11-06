@@ -34,6 +34,18 @@ In a Markdown file with headings, it reads a section only if its heading starts 
 
 An unreadable file or failed read after a contradiction exits `1` and still says the run is not complete.
 
+## JSON output
+
+Add `--json` for one JSON object on stdout, with no text lines. Exit codes stay the same.
+
+    still-true STATE.md more.md --repo owner/name --json
+
+The object has `schema: 1`, `complete`, `reason` (`null` on success), `counts` and `claims`.
+Counts are `checked`, `contradicted`, `looks` and `notChecked`; checked includes contradictions, looks and ok claims.
+Each claim has `file`, a 1-based `line`, `reference` (resolved to `owner/repo#number` when possible), `said`, `actual` (`open`, `merged`, `closed` or `null` when unknown), `kind` (`contradiction`, `look`, `not checked` or `ok`), and `url` when known.
+
+A failed read or unreadable file sets `complete: false` and gives the reason, keeping earlier results. The run stops there; claims already extracted from the current file that were not reached have kind `not checked`. Later files have no entries. A complete run can still have unchecked claims, such as an unresolved alias or a private issue. No claims gives an empty array and zero counts. `--json --help` returns the help text in a `help` field.
+
 ## When it is not for you
 
 - Silence does not mean your note is true. It means no contradiction was found in the sentences it understood. It stays quiet when unsure, on purpose.

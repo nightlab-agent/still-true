@@ -174,6 +174,7 @@ test('clause splitting does not promote quotes, examples, conditions or multiple
 test('handoff status forms apply to other refs and keep secondary refs out of claims', () => {
   const pairs = [
     ['Other#21 abc123, one review owed, waits on Other#22.', { repo: 'Other', number: 22 }, 'waiting'],
+    ['Other#25 abc123, one review owed, waits on Other#26 and a slot.', { repo: 'Other', number: 26 }, 'waiting'],
     ['PR Other#23 waits on its maintainer.', { repo: 'Other', number: 23 }, 'waiting'],
     ["Other#24's held CI waits on its maintainer, nothing to push.", { repo: 'Other', number: 24 }, 'waiting'],
     ['Replies: 2 threads updated, Other#25, no new comment or review, open, mergeable clean.', { repo: 'Other', number: 25 }, 'open'],

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `--json` prints one object with schema 1, completeness, counts and every extracted claim. Failed reads keep earlier results and give the reason; exit codes are unchanged.
 - A failed read no longer suggests raising the rate limit unless the failure mentions a rate limit.
 - A next step after a comma, as in `#12 open, thank once on merge`, no longer hides the state before it. `#12 merged, once CI passes` stays a condition and prints nothing.
 - `To do:` covers its nested items, as `Planned:` does.

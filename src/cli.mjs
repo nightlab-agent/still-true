@@ -3,7 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { compare } from './compare.mjs';
 import { readState, resolveRef } from './github.mjs';
 
-const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name]';
+const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name] [--json]';
+const JSON_HELP = '--json: print one JSON object (schema 1) with completeness, counts and every extracted claim.';
 
 export function repoFromRemote(url) {
   const m = /^(?:[a-z+]+:\/\/(?:[^@/\s]+@)?|[^@/\s]+@)?(?:www\.)?github\.com(?::\d+)?[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?\s*$/i.exec(url ?? '');
@@ -13,7 +14,7 @@ export function repoFromRemote(url) {
 const FULL = /^[^/\s=]+\/[^/\s=]+$/;
 
 export function parseArgs(argv) {
-  const a = { files: [], aliases: {}, repo: undefined, bad: null };
+  const a = { files: [], aliases: {}, repo: undefined, bad: null, json: argv.includes('--json') };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--repo') {
       a.repo = argv[++i];
@@ -22,7 +23,7 @@ export function parseArgs(argv) {
       const [name, full, more] = (argv[++i] ?? '').split('=');
       if (name && FULL.test(full ?? '') && more === undefined) a.aliases[name] = full;
       else a.bad ??= '--alias needs Name=owner/name';
-    } else a.files.push(argv[i]);
+    } else if (argv[i] !== '--json') a.files.push(argv[i]);
   }
   return a;
 }
@@ -38,69 +39,99 @@ const name = (ref) => (ref.owner ? `${ref.owner}/${ref.repo}#${ref.number}` : re
 export async function run(argv, deps) {
   const { out, extract, readFile = fsRead, read, token, defaultRepo = originRepo, env = process.env } = deps;
   const args = parseArgs(argv);
-  if (argv.includes('--help')) { out(USAGE); return 0; }
-  const odd = args.files.find((f) => f.startsWith('--'));
-  if (odd) { out(`unknown option ${odd}`); out(USAGE); return 2; }
-  if (args.bad) { out(args.bad); out(USAGE); return 2; }
-  if (!args.files.length) { out(USAGE); return 2; }
-  const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
-  const seen = new Map();
+  const print = (line) => { if (!args.json) out(line); };
+  const entries = [];
   let checked = 0, contradicted = 0, looks = 0, unplaced = 0, failure = null;
-
-  for (const file of args.files) {
-    let text;
-    try { text = await readFile(file, 'utf8'); }
-    catch (e) {
-      out(`${file}: cannot read: ${e.message}`);
-      out('This run is not complete.');
-      return contradicted ? 1 : 2;
-    }
-    for (const claim of extract(text, { aliases: args.aliases })) {
-      const ref = resolveRef(claim.ref, { defaultRepo: repo, aliases: args.aliases });
-      if (!ref) {
-        unplaced++;
-        const hint = claim.ref.repo ? `--alias ${claim.ref.repo}=owner/name` : '--repo owner/name';
-        out(`${file}:${claim.line}  not checked: ${name(claim.ref)} (use ${hint})`);
-        continue;
-      }
-      let real;
-      try {
-        if (!seen.has(key(ref))) seen.set(key(ref), await read(ref, { token }));
-        real = seen.get(key(ref));
-      } catch (e) { failure = e.message; break; }
-      const r = compare(claim, real);
-      if (r.verdict === 'unknown') {
-        unplaced++;
-        out(`${file}:${claim.line}  not checked: ${name(ref)} (GitHub has no such issue, or it is private)`);
-        continue;
-      }
-      checked++;
-      const when = real.at ? ` ${real.at.slice(0, 10)}` : '';
-      if (r.verdict === 'look') {
-        looks++;
-        out(`${file}:${claim.line}  look: waits on ${name(ref)}, which is ${real.state}${when}  ${real.url}`);
-        out(`  "${claim.quote}"`);
-      } else if (r.verdict === 'contradicted') {
-        contradicted++;
-        out(`${file}:${claim.line}  said ${claim.said}, but ${name(ref)} is ${real.state}${when}  ${real.url}`);
-        out(`  "${claim.quote}"`);
-      }
-    }
-    if (failure) break;
+  const finish = (code, reason = null, extra = {}) => {
+    if (args.json) out(JSON.stringify({
+      schema: 1, complete: reason === null, reason,
+      counts: { checked, contradicted, looks, notChecked: entries.length - checked },
+      claims: entries, ...extra,
+    }));
+    return code;
+  };
+  if (argv.includes('--help')) {
+    print(USAGE); print(JSON_HELP);
+    return finish(0, null, { help: `${USAGE}\n${JSON_HELP}` });
   }
+  const odd = args.files.find((f) => f.startsWith('--'));
+  if (odd) { print(`unknown option ${odd}`); print(USAGE); return finish(2, `unknown option ${odd}`); }
+  if (args.bad) { print(args.bad); print(USAGE); return finish(2, args.bad); }
+  if (!args.files.length) { print(USAGE); return finish(2, USAGE); }
+  const seen = new Map();
 
-  if (failure) {
-    out(`stopped: ${failure}`);
-    out('This run is not complete.');
-    if (/rate limit/i.test(failure)) out('Set GITHUB_TOKEN for a higher rate limit, or try again later.');
+  try {
+    const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
+    for (const file of args.files) {
+      let text;
+      try { text = await readFile(file, 'utf8'); }
+      catch (e) {
+        const reason = `${file}: cannot read: ${e instanceof Error ? e.message : String(e)}`;
+        print(reason);
+        print('This run is not complete.');
+        return finish(contradicted ? 1 : 2, reason);
+      }
+      // Record all claims in this file before reading GitHub, including those a failure may leave unchecked.
+      const claims = extract(text, { aliases: args.aliases }).map((claim) => {
+        const ref = resolveRef(claim.ref, { defaultRepo: repo, aliases: args.aliases });
+        const entry = args.json ? {
+          file, line: claim.line, reference: name(ref ?? claim.ref), said: claim.said,
+          actual: null, kind: 'not checked',
+        } : null;
+        if (entry) entries.push(entry);
+        return { claim, ref, entry };
+      });
+      for (const { claim, ref, entry } of claims) {
+        if (!ref) {
+          unplaced++;
+          const hint = claim.ref.repo ? `--alias ${claim.ref.repo}=owner/name` : '--repo owner/name';
+          print(`${file}:${claim.line}  not checked: ${name(claim.ref)} (use ${hint})`);
+          continue;
+        }
+        let real;
+        try {
+          if (!seen.has(key(ref))) seen.set(key(ref), await read(ref, { token }));
+          real = seen.get(key(ref));
+        } catch (e) { failure = e instanceof Error ? e.message : String(e); break; }
+        const r = compare(claim, real);
+        if (entry) {
+          entry.actual = real?.state ?? null;
+          entry.kind = r.verdict === 'contradicted' ? 'contradiction' : r.verdict === 'unknown' ? 'not checked' : r.verdict;
+          if (real?.url) entry.url = real.url;
+        }
+        if (r.verdict === 'unknown') {
+          unplaced++;
+          print(`${file}:${claim.line}  not checked: ${name(ref)} (GitHub has no such issue, or it is private)`);
+          continue;
+        }
+        checked++;
+        const when = real.at ? ` ${real.at.slice(0, 10)}` : '';
+        if (r.verdict === 'look') {
+          looks++;
+          print(`${file}:${claim.line}  look: waits on ${name(ref)}, which is ${real.state}${when}  ${real.url}`);
+          print(`  "${claim.quote}"`);
+        } else if (r.verdict === 'contradicted') {
+          contradicted++;
+          print(`${file}:${claim.line}  said ${claim.said}, but ${name(ref)} is ${real.state}${when}  ${real.url}`);
+          print(`  "${claim.quote}"`);
+        }
+      }
+      if (failure !== null) break;
+    }
+  } catch (e) { failure = e instanceof Error ? e.message : String(e); }
+
+  if (failure !== null) {
+    print(`stopped: ${failure}`);
+    print('This run is not complete.');
+    if (/rate limit/i.test(failure)) print('Set GITHUB_TOKEN for a higher rate limit, or try again later.');
     // Node's fetch ignores proxy settings unless told otherwise.
-    if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) out('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
-    return contradicted ? 1 : 2;
+    if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) print('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
+    return finish(contradicted ? 1 : 2, failure);
   }
-  if (!checked && !unplaced) { out('no claims about PR or issue state found'); return 0; }
+  if (!checked && !unplaced) { print('no claims about PR or issue state found'); return finish(0); }
   const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');
-  out(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
-  return contradicted ? 1 : 0;
+  print(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
+  return finish(contradicted ? 1 : 0);
 }
 
 export { readState };

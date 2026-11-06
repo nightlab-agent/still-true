@@ -5,7 +5,7 @@ const SUBJECT = new RegExp(`^((?:[^#]*\\s)?)(${TOKEN}(?:\\s+and\\s+${TOKEN})*)(.
 const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|already|was(?=\s+merged\b)|(?:PR|issue)(?:\s+is)?)\s+)?(open|merged|closed)\b(?!-)(.*)$/i;
 const BEFORE_REF = new RegExp(`(?<![\\w-])\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
 const COUNT_STATE = /^\d+\s+(open|merged|closed)$/i;
-const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|(?:its|the) maintainer)(?:\\s+(?:to merge|for a response))?$`, 'i');
+const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|(?:its|the) maintainer)(?:\\s+(?:to merge|for a response|and\\s+(?:a|an|the|its)\\s+[\\w -]+))?$`, 'i');
 const LABEL_LIST = new RegExp(`(?:^|:\\s*)(open|merged|closed)(?:\\s+(?:PRs|issues|pull requests))?:\\s*(${TOKEN}(?:\\s*(?:,|and)\\s*${TOKEN})*)$`, 'i');
 
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
