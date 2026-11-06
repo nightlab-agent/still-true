@@ -60,6 +60,7 @@ export async function run(argv, deps) {
   if (args.bad) { print(args.bad); print(USAGE); return finish(2, args.bad); }
   if (!args.files.length) { print(USAGE); return finish(2, USAGE); }
   const seen = new Map();
+  const skipped = [];
 
   try {
     const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
@@ -73,7 +74,7 @@ export async function run(argv, deps) {
         return finish(contradicted ? 1 : 2, reason);
       }
       // Record all claims in this file before reading GitHub, including those a failure may leave unchecked.
-      const claims = extract(text, { aliases: args.aliases }).map((claim) => {
+      const claims = extract(text, { aliases: args.aliases, skipped }).map((claim) => {
         const ref = resolveRef(claim.ref, { defaultRepo: repo, aliases: args.aliases });
         const entry = args.json ? {
           file, line: claim.line, reference: name(ref ?? claim.ref), said: claim.said,
@@ -132,7 +133,12 @@ export async function run(argv, deps) {
     if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) print('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
     return finish(contradicted ? 1 : 2, failure);
   }
-  if (!checked && !unplaced) { print('no claims about PR or issue state found'); return finish(0); }
+  if (!checked && !unplaced) {
+    print('no claims about PR or issue state found');
+    if (!skipped.length) return finish(0);
+    print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. Only headings starting with Now, Handoff, State, Status or Current are read.`);
+    return finish(0, null, { skipped_sections: skipped });
+  }
   const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');
   print(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
   return finish(contradicted ? 1 : 0);

@@ -207,7 +207,7 @@ function closes(lines, from, open) {
 
 // Aliases and the default repository are resolved by the reader. Preserve the
 // identity written in the note, including refs that the reader cannot place.
-export function extractClaims(text, _options = {}) {
+export function extractClaims(text, options = {}) {
   const claims = [];
   let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false, titled = false, planned = null;
   const flush = () => {
@@ -227,12 +227,15 @@ export function extractClaims(text, _options = {}) {
     });
     paragraph = [];
   };
+  // The file's level 1 title above a current section does not switch it off.
+  const readable = () => sections.every((section, i) => section.current || (section.title && i < sections.length - 1));
   const enterSection = (level, title) => {
     sections = sections.filter((section) => section.level < level);
     // Unknown headings may introduce plans, examples or history. Only a
     // current section (and current ancestors) permits extraction.
     sections.push({ level, current: CURRENT_HEADING.test(title), title: level === 1 && !titled && !/^(?:history|archive|old)\b/i.test(title) });
     titled ||= level === 1;
+    if (!readable()) options.skipped?.push(title);
   };
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
@@ -298,9 +301,7 @@ export function extractClaims(text, _options = {}) {
     } else if (!raw.trim()) {
       flush();
     } else {
-      // The file's level 1 title above a current section does not switch it off.
-      const readable = sections.every((section, i) => section.current || (section.title && i < sections.length - 1));
-      const claims = readable ? claimsFromLine(raw, index + 1) : [];
+      const claims = readable() ? claimsFromLine(raw, index + 1) : [];
       const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
       const label = /:\s*$/.test(raw) && PREAMBLE.test(body);
       const bare = body.replace(/[*_`]/g, '');
