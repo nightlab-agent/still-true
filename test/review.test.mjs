@@ -73,7 +73,7 @@ test('review: a byte order mark must not turn History into a read section', asyn
   const r = await go('﻿# History\n\n#12 is open\n\n## Now\n\nnothing\n', MERGED);
   assert.equal(r.code, 0, r.text);
 });
-test.todo('review: a stray opening quote must not walk a read into History (deferred: Quote recovery is outside the six parser fixes.)', async () => {
+test('review: a stray opening quote must not walk a read into History', async () => {
   const r = await go(`## Now\n\nThe bot said "ship it\n\n## History\n\nThe bot said ship" then.\n#12 is open\n`.replace('then.\n', 'then.\n\n'), MERGED);
   assert.equal(r.code, 0, r.text);
 });
@@ -85,14 +85,14 @@ test('review: front matter is not a heading, file with none is still read whole'
   const r = await go('---\nname: x\n---\n\n#12 is open\n', MERGED);
   assert.equal(r.code, 1, r.text);
 });
-test.todo('review: a stray quote does not silence the rest of the file (deferred: Quote recovery is outside the six parser fixes.)', async () => {
+test('review: a stray quote does not silence the rest of the file', async () => {
   const r = await go(`we rock 'n roll\n\n#12 is open\n`, MERGED);
   assert.equal(r.code, 1, r.text);
 });
-test.todo('comparison: a closed quote silences only itself (deferred: Comparison for the deferred quote recovery work.)', async () => {
+test('comparison: a closed quote silences only itself', async () => {
   assert.equal((await go(`we said "go"\n\n#12 is open\n`, MERGED)).code, 1);
 });
-test.todo('review: list item before a thematic break is not a setext heading (deferred: Thematic breaks outside front matter are outside this fix round.)', async () => {
+test('review: list item before a thematic break is not a setext heading', async () => {
   const r = await go('# Now\n\n- #12 is open\n---\n\n- #13 is open\n', MERGED);
   assert.match(r.text, /2 claims checked/);
 });
@@ -140,4 +140,43 @@ test('hunt: a 404 is cached, not re-read', async () => {
   let n = 0;
   await run(['n.md', '--repo', 'a/b'], { out() {}, extract: extractClaims, readFile: async () => '#1 is open\n\n#1 is merged\n', read: async () => { n++; return null; }, env: {} });
   assert.equal(n, 1);
+});
+
+// Dex's review of the shipped 0.1.0
+test('review: a parent list item that plans covers all its children', async () => {
+  const r = await go('- Planned changes:\n  - org/repo#12 merged\n  - org/repo#13 merged\n  - org/repo#14 merged\n', OPEN);
+  assert.equal(r.code, 0, r.text);
+});
+test('comparison: the same claims as separate list items are all checked', async () => {
+  const r = await go('- org/repo#12 merged\n- org/repo#13 merged\n- org/repo#14 merged\n', OPEN);
+  assert.equal(r.code, 1, r.text);
+  assert.match(r.text, /3 contradicted/);
+});
+test('comparison: a current parent keeps its later children', async () => {
+  const r = await go('- Status:\n  - org/repo#12 merged\n  - org/repo#13 merged\n', OPEN);
+  assert.equal(r.code, 1, r.text);
+});
+test('review: a colon line at the top level still silences only its neighbour', async () => {
+  const r = await go('Log:\n- org/repo#12 merged\n- org/repo#13 merged\n- org/repo#14 merged\n', OPEN);
+  assert.match(r.text, /2 contradicted/);
+});
+test('review: only the first level 1 heading is the file title', async () => {
+  const note = '# Project\n\n## Now\n\n#12 is merged\n\n# History\n\n## Now\n\n#13 is open\n';
+  const r = await go(note, MERGED);
+  assert.equal(r.code, 0, r.text);
+  assert.match(r.text, /1 claim checked/);
+});
+test('comparison: History at level 2 stays out too', async () => {
+  const r = await go('# Project\n\n## Now\n\n#12 is merged\n\n## History\n\n### Now\n\n#13 is open\n', MERGED);
+  assert.equal(r.code, 0, r.text);
+});
+for (const said of ['No longer waiting on org/repo#12.', 'Not waiting on org/repo#12.', 'Stopped waiting on org/repo#12.', 'Merged without waiting for org/repo#12.', 'Not yet waiting on org/repo#12.']) {
+  test(`review: negated wait is no wait: ${said}`, async () => {
+    const r = await go(said + '\n', MERGED);
+    assert.equal(r.code, 0, r.text);
+    assert.doesNotMatch(r.text, /look:/, r.text);
+  });
+}
+test('comparison: a plain wait still prints a look', async () => {
+  assert.match((await go('Waiting on org/repo#12.\n', MERGED)).text, /look: waits on org\/repo#12/);
 });

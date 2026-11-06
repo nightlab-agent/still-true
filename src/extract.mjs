@@ -13,6 +13,7 @@ const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
 const PREAMBLE = /^(?:if|unless|once|after|when|until|yesterday|old note|example|suppose|imagine)\b/i;
 const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|when|until|need|get|think|believe|locally|re-?opened)\b|\bonce\s+(?!at\b)\S|n['’]t\b|\bby\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|next)\b/i;
 const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|already)\s+)?(?:open|merged|closed)|(?:was|were|used to be)\s+(?:(?:still|currently|already)\s+)?(?:open|closed)|(?:open|merged|closed)\s+or\s+(?:open|merged|closed))\b/i;
+const NOT_WAITING = /\b(?:(?:not|never|no\s+longer|no\s+more|stop(?:s|ped)?|done|without|instead\s+of)\s+(?:(?:yet|still|currently)\s+)?(?:waits?|waiting)|(?:n['’]t)\s+(?:waits?|waiting))\b/i;
 const QUALIFIED_STATE = /^\s+(?:to|into|for|or|after)\b/i;
 // A later comma field must look like a state fact, not "open question".
 const COMMA_STATE_TAIL = /^(?:$|\s+(?:\d|today\b|yesterday\b|last\b|since\b|by\b|as\s+a\s+duplicate\b))/i;
@@ -140,7 +141,7 @@ function claimsFromClause(quote, line) {
       context.list = false;
     }
     const waiting = WAIT.exec(tail);
-    if (waiting) add(REF.test(waiting[1]) ? [waiting[1]] : context.subjects, 'waiting');
+    if (waiting && !NOT_WAITING.test(body)) add(REF.test(waiting[1]) ? [waiting[1]] : context.subjects, 'waiting');
     const before = BEFORE_REF.exec(text);
     if (before && (!subject || before.index < subject[1].length) &&
         (before[1].toLowerCase() !== 'open' || (before[2] &&
@@ -179,19 +180,33 @@ function claimsFromLine(raw, line) {
   return claims;
 }
 
+function closesInSection(lines, from, open) {
+  let quote = open;
+  for (let i = from; i < lines.length && quote !== null; i++) {
+    if (/^ {0,3}#{1,6}\s/.test(lines[i])) return false;
+    quote = endQuote(lines[i], quote);
+  }
+  return quote === null;
+}
+
 // Aliases and the default repository are resolved by the reader. Preserve the
 // identity written in the note, including refs that the reader cannot place.
 export function extractClaims(text, _options = {}) {
   const claims = [];
-  let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false;
+  let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false, titled = false;
   const flush = () => {
     // A wrapped condition, quotation or historical preamble can change the
     // following line. Separate list items may contain independent nonclaims.
     const blocks = (entry) => entry && !entry.claims.length && !entry.list;
     // A historical label ("Old note:") covers the whole list under it.
     const old = paragraph.findIndex((entry) => !entry.list && !entry.claims.length && entry.label);
+    // A claimless list item ending in a colon covers the items nested under it.
+    let parent = null;
     paragraph.forEach((entry, i) => {
-      if (old >= 0 && i > old && entry.list) return;
+      if (parent !== null && entry.indent <= parent) parent = null;
+      const nested = parent !== null;
+      if (!nested && entry.parent) parent = entry.indent;
+      if (nested || (old >= 0 && i > old && entry.list)) return;
       if (!blocks(paragraph[i - 1]) && !blocks(paragraph[i + 1])) claims.push(...entry.claims);
     });
     paragraph = [];
@@ -200,7 +215,8 @@ export function extractClaims(text, _options = {}) {
     sections = sections.filter((section) => section.level < level);
     // Unknown headings may introduce plans, examples or history. Only a
     // current section (and current ancestors) permits extraction.
-    sections.push({ level, current: CURRENT_HEADING.test(title) });
+    sections.push({ level, current: CURRENT_HEADING.test(title), title: level === 1 && !titled });
+    titled ||= level === 1;
   };
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
@@ -220,37 +236,44 @@ export function extractClaims(text, _options = {}) {
     }
     if (comment || raw.includes('<!--')) {
       comment = !raw.includes('-->') || raw.lastIndexOf('<!--') > raw.lastIndexOf('-->');
-      paragraph.push({ claims: [], list: false });
+      paragraph.push({ claims: [], list: false, indent: 0 });
       continue;
     }
     const quoted = quote !== null;
     quote = endQuote(raw, quote);
+    // A mark inside text with no close before the next heading was a stray.
+    if (!quoted && quote !== null && raw.trim().length > 1 && !closesInSection(lines, index + 1, quote)) quote = null;
     if (quoted || quote !== null) {
-      paragraph.push({ claims: [], list: false });
+      paragraph.push({ claims: [], list: false, indent: 0 });
       continue;
     }
     const opening = /^ {0,3}(`{3,}|~{3,})/.exec(raw);
     const heading = /^ {0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/.exec(raw);
     const underline = /^ {0,3}(=+|-+)\s*$/.exec(raw);
+    const listed = /^ {0,3}(?:[-+*]|[0-9]+[.)])\s+/.test(lines[index - 1] ?? '');
     if (opening) {
       flush();
       fence = opening[1];
     } else if (heading) {
       flush();
       enterSection(heading[1].length, heading[2]);
-    } else if (underline && paragraph.length) {
+    } else if (underline && paragraph.length && !(underline[1][0] === '-' && listed)) {
       const title = paragraph.length === 1 ? lines[index - 1].trim() : '';
       paragraph = [];
       enterSection(underline[1][0] === '=' ? 1 : 2, title);
+    } else if (underline && paragraph.length) {
+      flush(); // A rule after a list item, not a heading underline.
     } else if (!raw.trim()) {
       flush();
     } else {
-      // A level 1 title above a current section does not switch it off.
-      const readable = sections.every((section, i) => section.current || (section.level === 1 && i < sections.length - 1));
+      // The file's level 1 title above a current section does not switch it off.
+      const readable = sections.every((section, i) => section.current || (section.title && i < sections.length - 1));
       const claims = readable ? claimsFromLine(raw, index + 1) : [];
       const list = /^ {0,3}(?:[-+*]|[0-9]+[.)])\s+/.test(raw) && !/:\s*$/.test(raw);
-      const label = /:\s*$/.test(raw) && PREAMBLE.test(raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, ''));
-      paragraph.push({ claims, list, label });
+      const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
+      const label = /:\s*$/.test(raw) && PREAMBLE.test(body);
+      const parent = /^\s*(?:[-+*]|[0-9]+[.)])\s+/.test(raw) && /:\s*$/.test(raw) && !claims.length && !CURRENT_HEADING.test(body);
+      paragraph.push({ claims, list, label, parent, indent: /^\s*/.exec(raw)[0].length });
     }
   }
   flush();
