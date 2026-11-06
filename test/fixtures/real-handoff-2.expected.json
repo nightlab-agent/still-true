@@ -1,0 +1,167 @@
+{
+ "note": "Rick's hand labels. Entry number -> every claim a careful reader would check; 'either' means silence or the obvious claim are both fine; entries not listed must stay silent.",
+ "claims": {
+  "1": [
+   {
+    "ref": "Archy#716",
+    "said": "open"
+   }
+  ],
+  "2": "either",
+  "3": [
+   {
+    "ref": "opencode#27110",
+    "said": "open"
+   }
+  ],
+  "5": [
+   {
+    "ref": "#5245",
+    "said": "open"
+   }
+  ],
+  "7": [
+   {
+    "ref": "Archy#679",
+    "said": "merged"
+   }
+  ],
+  "8": "either",
+  "9": [
+   {
+    "ref": "Tracekit#509",
+    "said": "open"
+   }
+  ],
+  "10": [
+   {
+    "ref": "#1926",
+    "said": "open"
+   }
+  ],
+  "11": [
+   {
+    "ref": "crush#2038",
+    "said": "open"
+   }
+  ],
+  "12": "either",
+  "13": [
+   {
+    "ref": "#427",
+    "said": "open"
+   }
+  ],
+  "14": [
+   {
+    "ref": "argent#1762",
+    "said": "open"
+   }
+  ],
+  "15": [
+   {
+    "ref": "Archy#716",
+    "said": "open"
+   },
+   {
+    "ref": "claudelint#280",
+    "said": "open"
+   },
+   {
+    "ref": "cost-guard#6",
+    "said": "open"
+   },
+   {
+    "ref": "cct#1314",
+    "said": "open"
+   },
+   {
+    "ref": "#427",
+    "said": "open"
+   }
+  ],
+  "16": [
+   {
+    "ref": "argent#1724",
+    "said": "open"
+   }
+  ],
+  "17": [
+   {
+    "ref": "AlanEdward19/waymark#83",
+    "said": "merged"
+   }
+  ],
+  "18": [
+   {
+    "ref": "Archy#716",
+    "said": "merged"
+   }
+  ],
+  "19": [
+   {
+    "ref": "argent#1499",
+    "said": "open"
+   },
+   {
+    "ref": "EvoScientist#696",
+    "said": "open"
+   }
+  ],
+  "20": [
+   {
+    "ref": "Archy#679",
+    "said": "open"
+   }
+  ],
+  "22": [
+   {
+    "ref": "Archy#736",
+    "said": "merged"
+   }
+  ],
+  "23": [
+   {
+    "ref": "vercel-labs/skills#2593",
+    "said": "closed"
+   }
+  ],
+  "24": [
+   {
+    "ref": "argent#1724",
+    "said": "merged"
+   }
+  ],
+  "26": [
+   {
+    "ref": "claudelint#280",
+    "said": "waiting"
+   }
+  ],
+  "27": [
+   {
+    "ref": "cost-guard#8",
+    "said": "merged"
+   }
+  ],
+  "29": "either",
+  "30": [
+   {
+    "ref": "Archy#716",
+    "said": "merged"
+   }
+  ],
+  "31": [
+   {
+    "ref": "argent#1353",
+    "said": "open"
+   }
+  ],
+  "33": [
+   {
+    "ref": "Archy#736",
+    "said": "merged"
+   }
+  ]
+ }
+}
