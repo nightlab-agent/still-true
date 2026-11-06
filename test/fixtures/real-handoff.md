@@ -3,7 +3,7 @@
 ## Now
 
 1. Next, first: Archy#836 (#797) opened 00:17, stated limits in the body; follow it.
-2. argent#1768 81004b3, one critic owed, waits on argent#1762.
+2. argent#1768 81004b3, one review owed, waits on argent#1762.
 3. Open PRs followed up: Archy#716 open, clean, head de21b17, no change since 05:51Z.
 4. Replies: 1 thread updated, argent#1724, no new comment or review, open, mergeable clean.
 5. PR #427 waits on its maintainer.
