@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { extractClaims } from '../src/extract.mjs';
 import { run } from '../src/cli.mjs';
-import { extractClaims as oldExtract } from '../../old/src/extract.mjs';
-import { run as oldRun } from '../../old/src/cli.mjs';
+import { extractClaims as oldExtract } from './old/src/extract.mjs';
+import { run as oldRun } from './old/src/cli.mjs';
 
 const said = (t) => extractClaims(t).map((c) => `#${c.ref.number}=${c.said}`);
 const merged = { state: 'merged', kind: 'pull', at: '2026-11-05T00:00:00Z', url: 'u' };
