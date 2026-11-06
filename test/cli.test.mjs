@@ -94,3 +94,29 @@ test('a stale wait prints a look line and does not fail the run', async () => {
   assert.match(lines[0], /^n\.md:2  look: waits on a\/b#12, which is merged 2026-11-05  u$/);
   assert.match(lines.at(-1), /1 claim checked, 0 contradicted, 1 to look at/);
 });
+
+test('a failed read behind a proxy says how to reach GitHub through it', async () => {
+  const lines = [];
+  const rc = await run(['n.md', '--repo', 'a/b'], {
+    out: (l) => lines.push(l),
+    extract: () => [{ line: 1, ref: { number: 12 }, said: 'open', quote: 'x' }],
+    readFile: async () => 'x',
+    read: async () => { throw new Error('fetch failed'); },
+    token: null,
+    env: { HTTPS_PROXY: 'http://proxy:1' },
+  });
+  assert.equal(rc, 2);
+  assert.match(lines.join('\n'), /NODE_USE_ENV_PROXY=1/);
+});
+test('with no proxy set, no proxy hint', async () => {
+  const lines = [];
+  await run(['n.md', '--repo', 'a/b'], {
+    out: (l) => lines.push(l),
+    extract: () => [{ line: 1, ref: { number: 12 }, said: 'open', quote: 'x' }],
+    readFile: async () => 'x',
+    read: async () => { throw new Error('fetch failed'); },
+    token: null,
+    env: {},
+  });
+  assert.doesNotMatch(lines.join('\n'), /PROXY/);
+});

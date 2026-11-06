@@ -31,7 +31,7 @@ const key = (r) => `${r.owner}/${r.repo}#${r.number}`.toLowerCase();
 const name = (ref) => (ref.owner ? `${ref.owner}/${ref.repo}#${ref.number}` : ref.repo ? `${ref.repo}#${ref.number}` : `#${ref.number}`);
 
 export async function run(argv, deps) {
-  const { out, extract, readFile = fsRead, read, token, defaultRepo = originRepo } = deps;
+  const { out, extract, readFile = fsRead, read, token, defaultRepo = originRepo, env = process.env } = deps;
   const args = parseArgs(argv);
   if (!args.files.length) { out(USAGE); return 2; }
   const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
@@ -79,6 +79,8 @@ export async function run(argv, deps) {
   if (failure) {
     out(`stopped: ${failure}`);
     out('This run is not complete. Set GITHUB_TOKEN for a higher rate limit, or try again later.');
+    // Node's fetch ignores proxy settings unless told otherwise.
+    if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) out('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
     return contradicted ? 1 : 2;
   }
   if (!checked && !unplaced) { out('no claims about PR or issue state found'); return 0; }
