@@ -344,3 +344,8 @@ test('a current heading may carry a note after its first word', () => {
   assert.deepEqual(extractClaims('## Nowhere\n\n#12 open'), []);
   assert.deepEqual(extractClaims('## Stately plans\n\n#12 open'), []);
 });
+
+test('one plain line silences its neighbours, not the whole list', () => {
+  const text = ['- #1 open', '- #2 open', '- plan for later:', '- #3 open', '- #4 open', '- #5 open'].join('\n');
+  assert.deepEqual(extractClaims(text).map((claim) => claim.ref.number), [1, 4, 5]);
+});

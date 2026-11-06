@@ -172,9 +172,10 @@ export function extractClaims(text, _options = {}) {
   const flush = () => {
     // A wrapped condition, quotation or historical preamble can change the
     // following line. Separate list items may contain independent nonclaims.
-    if (paragraph.every((entry) => entry.claims.length || entry.list)) {
-      for (const entry of paragraph) claims.push(...entry.claims);
-    }
+    const blocks = (entry) => entry && !entry.claims.length && !entry.list;
+    paragraph.forEach((entry, i) => {
+      if (!blocks(paragraph[i - 1]) && !blocks(paragraph[i + 1])) claims.push(...entry.claims);
+    });
     paragraph = [];
   };
   const enterSection = (level, title) => {
