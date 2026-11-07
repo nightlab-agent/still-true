@@ -13,7 +13,7 @@ const exec = async (text, ...flags) => {
   return { code, text: o.join('\n') };
 };
 
-// s600, a real handoff: "until" in the sentence dropped its references, exit 0, 4 of 9 refs read.
+// A real handoff: "until" in the sentence dropped its references, exit 0, 4 of 9 refs read.
 const REAL = '## Now\n\n7. PRs open 5/5, no new one until a slot frees. Bench open: Archy#781, x/y#696.\n8. #427 is open\n';
 
 test('a reference on a read line with no claim is listed, with its line', () => {

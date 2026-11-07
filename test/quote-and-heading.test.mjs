@@ -9,13 +9,13 @@ const unreadOf = (text) => {
   return unread;
 };
 
-test('s600 F1: the first independent list item after a quote keeps its unread reference', () => {
+test('the first independent list item after a quote keeps its unread reference', () => {
   // Passing neighbour: a blank line separates the same quote and list.
   assert.deepEqual(unreadOf('> quote\n\n- see #12'), [{ line: 3, ref: { number: 12 } }]);
   assert.deepEqual(unreadOf('> quote\n- see #12'), [{ line: 2, ref: { number: 12 } }]);
 });
 
-test('s600 F2: a skipped setext heading is not an unread reference in the note body', () => {
+test('a skipped setext heading is not an unread reference in the note body', () => {
   // Passing neighbour: the same skipped heading in ATX form.
   assert.deepEqual(unreadOf('## History #12\n\nsee #13'), []);
   assert.deepEqual(unreadOf('History #12\n---\n\nsee #13'), []);
@@ -33,7 +33,7 @@ const invoke = async (text, ...flags) => {
 };
 
 // Dex's proposed strict policy, held for the next version: the print half ships first.
-test.todo('next version, s600 design: strict fails a missed explicit assertion, preserving bare refs and contradiction priority', async () => {
+test.todo('next version: strict fails a missed explicit assertion, preserving bare refs and contradiction priority', async () => {
   const bare = 'see #1. #2 open';
   const conditional = '#1 open until CI passes. #2 open';
   const until = 'PRs: #1 open, no new one until a slot frees. #2 open';
