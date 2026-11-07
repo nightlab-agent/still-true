@@ -19,6 +19,8 @@ const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
 const PREAMBLE = /^(?:if|unless|once|after|when|until|yesterday|old note|example|suppose|imagine)\b/i;
 const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|when|until|need|get|think|believe|locally|re-?opened)\b|\bonce\s+(?!at\b)\S|n['’]t\b|\bby\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|next)\b/i;
 const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|already)\s+)?(?:open|merged|closed)|(?:was|were|used to be)\s+(?:(?:still|currently|already)\s+)?(?:open|closed)|(?:open|merged|closed)\s+or\s+(?:open|merged|closed))\b/i;
+// The writer takes the claim back on the same line: "#12 is open (no longer true)".
+const RETRACTED = /\b(?:(?:no\s+longer|not)\s+(?:true|the\s+case|accurate|current)|outdated|(?:is|was)\s+(?:wrong|incorrect))\b/i;
 const NOT_WAITING = /\b(?:(?:not|never|no\s+longer|no\s+more|stop(?:s|ped)?|done|finished|quit|gave\s+up|nothing(?:\s+is)?|without|instead\s+of)\s+(?:(?:yet|still|currently|really)\s+)?(?:waits?|waiting)|(?:n['’]t)\s+(?:waits?|waiting))\b/i;
 const QUALIFIED_STATE = /^\s+(?:to|into|for|or|after)\b/i;
 // A later comma field must look like a state fact, not "open question".
@@ -107,7 +109,7 @@ const laterStep = (field) => (field.includes('#') || /\b(?:only|just|not|except|
 
 function claimsFromClause(quote, line) {
   const body = unquoted(quote);
-  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body)) return [];
+  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body) || RETRACTED.test(body)) return [];
   const claims = [];
   const add = (tokens, said) => {
     for (const token of tokens) {
