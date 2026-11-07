@@ -67,7 +67,7 @@ Add `--json` for one JSON object on stdout, with no text lines. Exit codes stay 
 The object has `schema: 1`, `complete`, `reason` (`null` on success), `counts` and `claims`.
 Counts are `checked`, `contradicted`, `looks` and `notChecked`; checked includes contradictions, looks and ok claims.
 Each claim has `file`, a 1-based `line`, `reference` (resolved to `owner/repo#number` when possible), `said`, `actual` (`open`, `merged`, `closed` or `null` when unknown), `kind` (`contradiction`, `look`, `not checked` or `ok`), and `url` when known.
-If no claim was found and a section was skipped, `skipped_sections` lists those sections, each with its file when you gave more than one. `complete` is still `true` and the exit is `0` without `--strict`, so a script that must know a note was really read should use `--strict`.
+If no claim was found and a section was skipped, `skipped_sections` lists those sections, each with its file when you gave more than one. `complete` is still `true` and the exit is `0` without `--strict`, so a script that must know something was verified should use `--strict`. Strict does not say every reference gave a claim: read `no claim read` for that.
 `unread_references`, present only when there are some, lists `file`, `line` and `reference` for each reference that gave no claim. It does not change `counts` or the exit.
 `said` can also be `queued`, for the review obligations above. A nonempty GitHub `state_reason` is included as an optional string field; null or absent reasons are omitted.
 

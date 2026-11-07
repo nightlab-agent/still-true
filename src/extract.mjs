@@ -319,6 +319,7 @@ export function extractClaims(text, options = {}) {
       const title = paragraph.map((entry) => entry.text).filter(Boolean).join(' ');
       // Preserve the conservative reading of multiline headings while naming them.
       const currentTitle = paragraph.length === 1 ? lines[index - 1].trim() : '';
+      while (read.at(-1)?.line > index - paragraph.length) read.pop(); // Those lines were a heading after all.
       paragraph = [];
       enterSection(underline[1][0] === '=' ? 1 : 2, currentTitle, title);
     } else if (underline && paragraph.length) {
@@ -327,12 +328,12 @@ export function extractClaims(text, options = {}) {
       flush();
     } else {
       const claims = readable() ? claimsFromLine(raw, index + 1) : [];
-      if (readable() && !/^(?: {4}|\t)/.test(raw) && !paragraph.at(-1)?.blockquote) read.push({ raw, line: index + 1 });
       const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
       const label = /:\s*$/.test(raw) && PREAMBLE.test(body);
       const bare = body.replace(/[*_`]/g, '');
       const item = /^\s*(?:[-+*]|[0-9]+[.)])\s+/.test(raw);
       if (item && paragraph.at(-1)?.blockquote) flush(true); // A new list is not a quote continuation.
+      if (readable() && !/^(?: {4}|\t)/.test(raw) && !paragraph.at(-1)?.blockquote) read.push({ raw, line: index + 1 });
       if (!item && paragraph.at(-1)?.blockquote) { // Every unmarked line of a quoted paragraph stays in the quote.
         paragraph.push({ claims: [], list: false, indent: Infinity, blockquote: true });
         continue;
