@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-11-07
 
 - README: a short name also resolves through a matching `--repo`, the wordings it does not read yet are listed, Node 20 tested, the proxy setting's limit on Node 20 stated, the miss corrected to six session ends.
 - A wait that a later clause cancels, as in `Waiting on #1 and a slot is no longer necessary.`, no longer prints a look.
