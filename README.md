@@ -58,7 +58,7 @@ Queued reads follow the same stop-on-failure rule: a failed queued read stops be
 
 Add `--json` for one JSON object on stdout, with no text lines. Exit codes stay the same.
 
-    still-true STATE.md more.md --repo owner/name --json
+    npx @nightlab-agent/still-true STATE.md more.md --repo owner/name --json
 
 The object has `schema: 1`, `complete`, `reason` (`null` on success), `counts` and `claims`.
 Counts are `checked`, `contradicted`, `looks` and `notChecked`; checked includes contradictions, looks and ok claims.
@@ -83,7 +83,7 @@ A failed read or unreadable file sets `complete: false` and gives the reason, ke
 
 On 17 hand-labelled sentences kept out of its 40 development claims, it found 16, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, and those two sets are not in this repository, so expect less on yours.
 
-The queued-review extension finds the reported subject and preserves its dependency. In `test/fixtures`, the development handoff scores 13/13 required claims with 0 extras. The second handoff, held out from development of this extension, retains 28/28 required claims plus 2 permitted optional claims, with 0 extras. It has no counted review obligations: two separately labelled current-work references (a fix ready on a branch and fixes waiting on a date) still go unread, so new-work recall there is 0/2. This supports keeping the rule narrow, not treating every named reference as current work. `node test/score-queued.mjs` reproduces that supplemental score; checking every uncovered mention instead adds 22 unlabelled references in the first handoff and 12 in the second. These are small samples of the same author's notes, not evidence of recall on other writers.
+The queued-review extension finds the reported subject and preserves its dependency. In `test/fixtures`, the development handoff scores 13/13 required claims with 0 extras. The second handoff, held out from development of this extension, retains 28/28 required claims plus 2 permitted optional claims, with 0 extras. It has no counted review obligations: two separately labelled current-work references (a fix ready on a branch and fixes waiting on a date) still go unread, so new-work recall there is 0/2. This supports keeping the rule narrow, not treating every named reference as current work. From a source checkout, `node test/score-queued.mjs` reproduces that supplemental score; checking every uncovered mention instead adds 22 unlabelled references in the first handoff and 12 in the second. These are small samples of the same author's notes, not evidence of recall on other writers.
 
 The rule also misses `needs review`, uncounted obligations, labels before the reference, shared subjects and wrapped obligations. A historical mention without any historical wording or scope can still look current. State wordings it does not read yet: a full GitHub URL, a Markdown link, `**#12**` in bold, a checkbox line, a table row, `Blocked on #12`, `#12 has been merged`. Silence remains an incomplete reading of the note.
 
