@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-07
 
 - `--strict`: exit 3 when any note had no claim to verify or a claim could not be checked, so a green run can mean the note was really read. Without the flag every exit code is unchanged.
 
