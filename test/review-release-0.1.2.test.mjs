@@ -89,7 +89,11 @@ test('F1 and F2 stay silent in text and JSON while their controls still contradi
         assert.equal(report.counts.checked, expected, note);
         assert.equal(report.counts.contradicted, expected, note);
       } else if (expected) assert.match(lines.join('\n'), /said .*but/);
-      else assert.deepEqual(lines, ['no claims about PR or issue state found']);
+      else {
+        // Silent means no verdict; the reference is still named as unread.
+        assert.doesNotMatch(lines.join('\n'), /said .*but/);
+        assert.match(lines.at(-1), /^no claims about PR or issue state found/);
+      }
     }
   }
 });

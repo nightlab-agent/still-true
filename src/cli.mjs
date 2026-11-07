@@ -43,13 +43,13 @@ export async function run(argv, deps) {
   const { out, extract, readFile = fsRead, read, token, defaultRepo = originRepo, env = process.env } = deps;
   const args = parseArgs(argv);
   const print = (line) => { if (!args.json) out(line); };
-  const entries = [];
+  const entries = [], noClaim = [];
   let checked = 0, contradicted = 0, looks = 0, unplaced = 0, failure = null;
   const finish = (code, reason = null, extra = {}) => {
     if (args.json) out(JSON.stringify({
       schema: 1, complete: reason === null, reason,
       counts: { checked, contradicted, looks, notChecked: entries.length - checked },
-      claims: entries, ...extra,
+      claims: entries, ...(noClaim.length ? { unread_references: noClaim } : {}), ...extra,
     }));
     return code;
   };
@@ -77,8 +77,8 @@ export async function run(argv, deps) {
         return finish(contradicted ? 1 : 2, reason);
       }
       // Record all claims in this file before reading GitHub, including those a failure may leave unchecked.
-      const here = [];
-      const claims = extract(text, { aliases: args.aliases, skipped: here }).map((claim) => {
+      const here = [], unreadHere = [];
+      const claims = extract(text, { aliases: args.aliases, skipped: here, unread: unreadHere }).map((claim) => {
         const ref = resolveRef(claim.ref, { defaultRepo: repo, aliases: args.aliases });
         const entry = args.json ? {
           file, line: claim.line, reference: name(ref ?? claim.ref), said: claim.said,
@@ -127,6 +127,12 @@ export async function run(argv, deps) {
           print(`  "${claim.quote}"`);
         }
       }
+      const written = new Map();
+      for (const { line, ref } of unreadHere) {
+        noClaim.push({ file, line, reference: name(resolveRef(ref, { defaultRepo: repo, aliases: args.aliases }) ?? ref) });
+        written.set(line, [...(written.get(line) ?? []), name(ref)]);
+      }
+      for (const [line, refs] of written) print(`${file}:${line}  no claim read: ${refs.join(', ')}`);
       if (failure !== null) break;
     }
   } catch (e) { failure = e instanceof Error ? e.message : String(e); }
@@ -139,6 +145,7 @@ export async function run(argv, deps) {
     if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) print('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
     return finish(contradicted ? 1 : 2, failure);
   }
+  const leftBehind = noClaim.length ? `${noClaim.length} reference${noClaim.length === 1 ? '' : 's'} with no claim read` : '';
   const strictFail = (extra = {}) => {
     const why = [];
     if (unplaced) why.push(`${unplaced} claim${unplaced === 1 ? '' : 's'} not checked`);
@@ -147,12 +154,12 @@ export async function run(argv, deps) {
     return finish(3, null, { ...extra, strict_failed: true });
   };
   if (!checked && !unplaced) {
-    print('no claims about PR or issue state found');
+    print(`no claims about PR or issue state found${leftBehind && `, ${leftBehind}`}`);
     if (!skipped.length) return args.strict ? strictFail() : finish(0);
     print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. A section is read only if its heading, and every heading above it, apart from the file's title, starts with Now, Handoff, State, Status or Current.`);
     return args.strict ? strictFail({ skipped_sections: skipped }) : finish(0, null, { skipped_sections: skipped });
   }
-  const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');
+  const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '') + (leftBehind && `, ${leftBehind}`);
   print(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
   if (contradicted) return finish(1);
   return args.strict && (unplaced || unread.length) ? strictFail() : finish(0);

@@ -13,6 +13,7 @@ const QUEUED = new RegExp(`^(?:(?:PR|issue|pull request)\\s+)?(${TOKEN})(?:\\s+[
 const LABEL_LIST = new RegExp(`(?:^|:\\s*)(open|merged|closed)(?:\\s+(?:PRs|issues|pull requests))?:\\s*(${TOKEN}(?:\\s*(?:,|and)\\s*${TOKEN})*)$`, 'i');
 
 const REF = /^(?:([a-z0-9-]+)\/)?([a-z0-9_.-]+)?#([1-9][0-9]*)$/i;
+const MENTION = /(?<![\w./#-])(?:[a-z0-9-]+\/)?[a-z0-9_.-]*#[1-9][0-9]*(?![\w-]|\.\w)/gi;
 const PLANNED = /\b(?:plans?|planned|planning|proposed|intended|expected|ideas?|goals?|draft|to[- ]?dos?|next|later|someday|old|previous|history|example)\b/i;
 const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
 const PREAMBLE = /^(?:if|unless|once|after|when|until|yesterday|old note|example|suppose|imagine)\b/i;
@@ -199,6 +200,24 @@ function claimsFromLine(raw, line) {
   return claims;
 }
 
+const refKey = (ref) => `${ref.owner ?? ''}/${ref.repo ?? ''}#${ref.number}`.toLowerCase();
+
+// References on read lines that gave no claim, once per line, in note order.
+function unreadReferences(read, claims) {
+  const claimed = new Set(claims.map((claim) => `${claim.line} ${refKey(claim.ref)}`));
+  const unread = [];
+  for (const { raw, line } of read) {
+    for (const [token] of unquoted(raw).matchAll(MENTION)) {
+      const ref = makeClaim(token, '', '', line)?.ref;
+      const id = ref && `${line} ${refKey(ref)}`;
+      if (!ref || claimed.has(id)) continue;
+      claimed.add(id);
+      unread.push({ line, ref });
+    }
+  }
+  return unread;
+}
+
 function closes(lines, from, open) {
   let quote = open;
   for (let i = from; i < lines.length && quote !== null; i++) quote = endQuote(lines[i], quote);
@@ -208,7 +227,7 @@ function closes(lines, from, open) {
 // Aliases and the default repository are resolved by the reader. Preserve the
 // identity written in the note, including refs that the reader cannot place.
 export function extractClaims(text, options = {}) {
-  const claims = [];
+  const claims = [], read = [];
   let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false, titled = false, planned = null;
   const flush = (keepLabel = false) => {
     // A wrapped condition, quotation or historical preamble can change the
@@ -308,6 +327,7 @@ export function extractClaims(text, options = {}) {
       flush();
     } else {
       const claims = readable() ? claimsFromLine(raw, index + 1) : [];
+      if (readable() && !/^(?: {4}|\t)/.test(raw) && !paragraph.at(-1)?.blockquote) read.push({ raw, line: index + 1 });
       const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
       const label = /:\s*$/.test(raw) && PREAMBLE.test(body);
       const bare = body.replace(/[*_`]/g, '');
@@ -325,5 +345,6 @@ export function extractClaims(text, options = {}) {
     }
   }
   flush();
+  options.unread?.push(...unreadReferences(read, claims));
   return claims;
 }
