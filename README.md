@@ -23,13 +23,13 @@ Every option and exit code:
 
 With one thing to look at, the last line gains `, 1 to look at`.
 
-The real miss behind it: an agent's handoff went on counting 5 open pull requests through twelve session ends after one had merged. A bare count names no pull request, so still-true needs the note to name it.
+The real miss behind it: an agent's handoff went on counting 5 open pull requests through six session ends after one had merged. A bare count names no pull request, so still-true needs the note to name it.
 
 ## Use it
 
-Give it one or more Markdown files. For a bare `#12` it uses `--repo owner/name`, or the `origin` remote of the folder you run it in. For a short name like `Archy#827`, give `--alias Archy=owner/name`, or it prints `not checked` for that line.
+Give it one or more Markdown files. For a bare `#12` it uses `--repo owner/name`, or the `origin` remote of the folder you run it in. For a short name like `Archy#827`, give `--alias Archy=owner/name`, or a `--repo` with that repo name; otherwise it prints `not checked` for that line.
 
-Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Needs Node 20 or newer. Behind a proxy, run with `NODE_USE_ENV_PROXY=1`, tested on Node 22; Node prints an experimental warning.
+Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Needs Node 20 or newer, tested on 20 and 22. Behind a proxy, run with `NODE_USE_ENV_PROXY=1` on Node 22; Node prints an experimental warning. Node 20 does not read that setting, and the run stops with `fetch failed`.
 
 In a Markdown file with headings, it reads a section only if its heading starts with Now, Handoff, State, Status or Current, and any heading above it does too, or is the file's first level 1 heading. A first level 1 heading starting with History, Archive or Old is not a title. Plans and history stay out. Text before the first heading is read, and a file with no headings is read whole. If it finds no claims, it names the sections it skipped.
 
@@ -81,11 +81,11 @@ A failed read or unreadable file sets `complete: false` and gives the reason, ke
 
 ## How well it reads
 
-On 17 hand-labelled sentences kept out of its 40 development claims, it found 16, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, so expect less on yours.
+On 17 hand-labelled sentences kept out of its 40 development claims, it found 16, 0 wrong. A sample of 30 claims from six days of logs held 2 wrong, both bare numbers (`#3`, `#4`) that named findings. All of that wording is one agent's, and those two sets are not in this repository, so expect less on yours.
 
 The queued-review extension finds the reported subject and preserves its dependency. In `test/fixtures`, the development handoff scores 13/13 required claims with 0 extras. The second handoff, held out from development of this extension, retains 28/28 required claims plus 2 permitted optional claims, with 0 extras. It has no counted review obligations: two separately labelled current-work references (a fix ready on a branch and fixes waiting on a date) still go unread, so new-work recall there is 0/2. This supports keeping the rule narrow, not treating every named reference as current work. `node test/score-queued.mjs` reproduces that supplemental score; checking every uncovered mention instead adds 22 unlabelled references in the first handoff and 12 in the second. These are small samples of the same author's notes, not evidence of recall on other writers.
 
-The rule also misses `needs review`, uncounted obligations, labels before the reference, shared subjects and wrapped obligations. A historical mention without any historical wording or scope can still look current. Silence remains an incomplete reading of the note.
+The rule also misses `needs review`, uncounted obligations, labels before the reference, shared subjects and wrapped obligations. A historical mention without any historical wording or scope can still look current. State wordings it does not read yet: a full GitHub URL, a Markdown link, `**#12**` in bold, a checkbox line, a table row, `Blocked on #12`, `#12 has been merged`. Silence remains an incomplete reading of the note.
 
 ## The contract between the two halves
 

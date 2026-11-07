@@ -75,7 +75,7 @@ No network, registry install or live GitHub checks were performed. Only Node
    no summary; JSON emits no object. Callers must check process termination.
 4. Real system differs: subprocesses, filesystem, packing and signals were real;
    API responses were synthetic REST-shaped JSON. Live merge fields, private
-   access, rate limits, aliases and proxy behavior still need Rick's live check.
+   access, rate limits, aliases and proxy behavior still need a live check.
    No new transport or concurrency fault was found in the exercised paths.
 
 Before shipping: fix F1/F2, promote their regressions into the normal suite,

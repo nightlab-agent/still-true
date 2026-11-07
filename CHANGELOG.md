@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- README: a short name also resolves through a matching `--repo`, the wordings it does not read yet are listed, Node 20 tested, the proxy setting's limit on Node 20 stated, the miss corrected to six session ends.
 - A wait that a later clause cancels, as in `Waiting on #1 and a slot is no longer necessary.`, no longer prints a look.
 - The skip line now gives the whole rule: a section is read only if its heading and every heading above it, apart from the file's title, start with one of the names. With more than one file, each skipped section names its file, in text and in `skipped_sections`.
 - README: one line on what it is, a note to try it on, how to remove it, and `skipped_sections` in the JSON section.

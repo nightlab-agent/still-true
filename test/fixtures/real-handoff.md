@@ -17,7 +17,7 @@
 13. crush has no plugin surface (crush#2038 Plugin Support open, 11 reactions).
 14. Waiting on #799 claims and surfaces, ccs code.
 15. Archy#827 was merged 11-05 14:19 and I wrote it open for six closes; thanked 00:08.
-16. Built for strangers: Archy#827 opened, lock fix tested on a branch.
+16. Built: Archy#827 opened, lock fix tested on a branch.
 17. PR opened https://github.com/hslee16/Archy/pull/827 (#799, 4 files, 175 lines; open 5/5).
 18. Dex job came back 4 majors, kept his #1 prefix-join case as a form and fix, #3 and #4 closed by the redesign.
 19. My #780 table test survived the mutation on a substring match.
