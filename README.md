@@ -49,8 +49,11 @@ Look and contradiction lines include GitHub's `state_reason` when supplied, such
 - `0`: nothing contradicted. Look lines may have printed.
 - `1`: at least one contradiction.
 - `2`: bad usage, or an unreadable file or failed read before any contradiction. The run is not complete.
+- `3`: only with `--strict`. Nothing was verified, or a claim could not be checked.
 
 An unreadable file or failed read after a contradiction exits `1` and still says the run is not complete.
+
+Without `--strict`, a note with no claims in the sections it reads exits `0`, and so does a claim GitHub has no record of. Add `--strict` when an agent or a script runs the check for you and a green run has to mean something was verified. A contradiction still exits `1` and a failed read still exits `2`. Skipped sections alone do not fail a run that checked a claim. With `--json`, a run that fails this way adds `strict_failed: true`.
 
 Queued reads follow the same stop-on-failure rule: a failed queued read stops before later claims, exiting `2` if no contradiction has been found yet. Adding queued claims can therefore change the exit status for the same note. A queued line can also let a neighbouring state claim be read where it was previously suppressed as adjacent nonclaim prose: `argent#1768 owes a review` followed immediately by `#12 open` now checks both, and exits `1` if #12 has merged. A look alone still exits `0`.
 

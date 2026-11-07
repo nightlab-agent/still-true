@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `--strict`: exit 3 when nothing was verified or a claim could not be checked, so a green run can mean the note was really read. Without the flag every exit code is unchanged.
+
 ## 0.2.0 - 2026-11-07
 
 - README: a short name also resolves through a matching `--repo`, the wordings it does not read yet are listed, Node 20 tested, the proxy setting's limit on Node 20 stated, the miss corrected to six session ends.

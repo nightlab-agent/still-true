@@ -3,9 +3,10 @@ import { spawnSync } from 'node:child_process';
 import { compare } from './compare.mjs';
 import { readState, resolveRef } from './github.mjs';
 
-const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name] [--json]';
+const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name] [--json] [--strict]';
 const JSON_HELP = '--json: print one JSON object (schema 1) with completeness, counts and every extracted claim.';
-const EXIT_HELP = 'exit 0: nothing contradicted, look lines may have printed\nexit 1: at least one contradiction\nexit 2: bad usage, or an unreadable file or failed read before any contradiction; the run is not complete';
+const STRICT_HELP = '--strict: exit 3 if nothing was verified, or if any claim could not be checked. Use it when a green run has to mean the note was really read.';
+const EXIT_HELP = 'exit 0: nothing contradicted, look lines may have printed\nexit 1: at least one contradiction\nexit 2: bad usage, or an unreadable file or failed read before any contradiction; the run is not complete\nexit 3: with --strict only, nothing was verified or a claim was not checked';
 
 export function repoFromRemote(url) {
   const m = /^(?:[a-z+]+:\/\/(?:[^@/\s]+@)?|[^@/\s]+@)?(?:www\.)?github\.com(?::\d+)?[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?\s*$/i.exec(url ?? '');
@@ -15,7 +16,7 @@ export function repoFromRemote(url) {
 const FULL = /^[^/\s=]+\/[^/\s=]+$/;
 
 export function parseArgs(argv) {
-  const a = { files: [], aliases: {}, repo: undefined, bad: null, json: argv.includes('--json') };
+  const a = { files: [], aliases: {}, repo: undefined, bad: null, json: argv.includes('--json'), strict: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--repo') {
       a.repo = argv[++i];
@@ -24,7 +25,8 @@ export function parseArgs(argv) {
       const [name, full, more] = (argv[++i] ?? '').split('=');
       if (name && FULL.test(full ?? '') && more === undefined) a.aliases[name] = full;
       else a.bad ??= '--alias needs Name=owner/name';
-    } else if (argv[i] !== '--json') a.files.push(argv[i]);
+    } else if (argv[i] === '--strict') a.strict = true;
+    else if (argv[i] !== '--json') a.files.push(argv[i]);
   }
   return a;
 }
@@ -52,8 +54,8 @@ export async function run(argv, deps) {
     return code;
   };
   if (argv.includes('--help')) {
-    print(USAGE); print(JSON_HELP); print(EXIT_HELP);
-    return finish(0, null, { help: `${USAGE}\n${JSON_HELP}\n${EXIT_HELP}` });
+    print(USAGE); print(JSON_HELP); print(STRICT_HELP); print(EXIT_HELP);
+    return finish(0, null, { help: `${USAGE}\n${JSON_HELP}\n${STRICT_HELP}\n${EXIT_HELP}` });
   }
   const odd = args.files.find((f) => f.startsWith('--'));
   if (odd) { print(`unknown option ${odd}`); print(USAGE); return finish(2, `unknown option ${odd}`); }
@@ -135,15 +137,21 @@ export async function run(argv, deps) {
     if ((env.HTTPS_PROXY ?? env.https_proxy) && !env.NODE_USE_ENV_PROXY) print('You have a proxy set: run again with NODE_USE_ENV_PROXY=1.');
     return finish(contradicted ? 1 : 2, failure);
   }
+  const strictFail = (extra = {}) => {
+    const why = unplaced ? `${unplaced} claim${unplaced === 1 ? '' : 's'} not checked` : 'nothing was verified';
+    print(`--strict: ${why}`);
+    return finish(3, null, { ...extra, strict_failed: true });
+  };
   if (!checked && !unplaced) {
     print('no claims about PR or issue state found');
-    if (!skipped.length) return finish(0);
+    if (!skipped.length) return args.strict ? strictFail() : finish(0);
     print(`skipped ${skipped.length} section${skipped.length === 1 ? '' : 's'}: ${skipped.join(', ')}. A section is read only if its heading, and every heading above it, apart from the file's title, starts with Now, Handoff, State, Status or Current.`);
-    return finish(0, null, { skipped_sections: skipped });
+    return args.strict ? strictFail({ skipped_sections: skipped }) : finish(0, null, { skipped_sections: skipped });
   }
   const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');
   print(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
-  return finish(contradicted ? 1 : 0);
+  if (contradicted) return finish(1);
+  return args.strict && unplaced ? strictFail() : finish(0);
 }
 
 export { readState };
