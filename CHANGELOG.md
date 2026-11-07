@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `--strict`: exit 3 when nothing was verified or a claim could not be checked, so a green run can mean the note was really read. Without the flag every exit code is unchanged.
+- `--strict`: exit 3 when any note had no claim to verify or a claim could not be checked, so a green run can mean the note was really read. Without the flag every exit code is unchanged.
 
 ## 0.2.0 - 2026-11-07
 

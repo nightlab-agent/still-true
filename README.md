@@ -49,11 +49,11 @@ Look and contradiction lines include GitHub's `state_reason` when supplied, such
 - `0`: nothing contradicted. Look lines may have printed.
 - `1`: at least one contradiction.
 - `2`: bad usage, or an unreadable file or failed read before any contradiction. The run is not complete.
-- `3`: only with `--strict`. Nothing was verified, or a claim could not be checked.
+- `3`: only with `--strict`. A note had no claim to verify, or a claim could not be checked.
 
 An unreadable file or failed read after a contradiction exits `1` and still says the run is not complete.
 
-Without `--strict`, a note with no claims in the sections it reads exits `0`, and so does a claim GitHub has no record of. Add `--strict` when an agent or a script runs the check for you and a green run has to mean something was verified. A contradiction still exits `1` and a failed read still exits `2`. Skipped sections alone do not fail a run that checked a claim. With `--json`, a run that fails this way adds `strict_failed: true`.
+Without `--strict`, a note with no claims in the sections it reads exits `0`, and so does a claim GitHub has no record of. Add `--strict` when an agent or a script runs the check for you and a green run has to mean something was verified. A contradiction still exits `1` and a failed read still exits `2`. Each note is judged on its own, so a note with no claims fails the run even when another note checked out. Skipped sections alone do not fail a note that had a claim. With `--json`, a run that fails this way adds `strict_failed: true`.
 
 Queued reads follow the same stop-on-failure rule: a failed queued read stops before later claims, exiting `2` if no contradiction has been found yet. Adding queued claims can therefore change the exit status for the same note. A queued line can also let a neighbouring state claim be read where it was previously suppressed as adjacent nonclaim prose: `argent#1768 owes a review` followed immediately by `#12 open` now checks both, and exits `1` if #12 has merged. A look alone still exits `0`.
 
@@ -66,7 +66,7 @@ Add `--json` for one JSON object on stdout, with no text lines. Exit codes stay 
 The object has `schema: 1`, `complete`, `reason` (`null` on success), `counts` and `claims`.
 Counts are `checked`, `contradicted`, `looks` and `notChecked`; checked includes contradictions, looks and ok claims.
 Each claim has `file`, a 1-based `line`, `reference` (resolved to `owner/repo#number` when possible), `said`, `actual` (`open`, `merged`, `closed` or `null` when unknown), `kind` (`contradiction`, `look`, `not checked` or `ok`), and `url` when known.
-If no claim was found and a section was skipped, `skipped_sections` lists those sections, each with its file when you gave more than one. `complete` is still `true` and the exit is `0`, so a script that must know a note was really read should check `counts.checked` too.
+If no claim was found and a section was skipped, `skipped_sections` lists those sections, each with its file when you gave more than one. `complete` is still `true` and the exit is `0` without `--strict`, so a script that must know a note was really read should use `--strict`.
 `said` can also be `queued`, for the review obligations above. A nonempty GitHub `state_reason` is included as an optional string field; null or absent reasons are omitted.
 
 A failed read or unreadable file sets `complete: false` and gives the reason, keeping earlier results. The run stops there; claims already extracted from the current file that were not reached have kind `not checked`. Later files have no entries. A complete run can still have unchecked claims, such as an unresolved alias or a private issue. No claims gives an empty array and zero counts. `--json --help` returns the help text in a `help` field.

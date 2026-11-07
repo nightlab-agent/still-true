@@ -65,3 +65,23 @@ test('--strict is not read as a file or as the value of --repo', async () => {
   assert.equal(await run(['h.md', '--repo', '--strict'], { ...base, out, extract: claims([]), read: open }), 2);
   assert.match(o.join('\n'), /--repo needs owner\/name/);
 });
+test('--strict judges each note: a claimless second note exits 3 and is named', async () => {
+  const { out, o } = io();
+  const extract = (text) => (text === 'first' ? [c(3, { number: 12 }, 'open')] : []);
+  const readFile = async (f) => (f === 'a.md' ? 'first' : 'empty');
+  assert.equal(await run(['a.md', 'b.md', '--repo', 'a/b', '--strict'], { ...base, readFile, out, extract, read: open }), 3);
+  assert.match(o.join('\n'), /--strict: nothing was verified in b\.md/);
+});
+test('--strict: a claimless second note does not outrank a contradiction', async () => {
+  const { out } = io();
+  const extract = (text) => (text === 'first' ? [c(3, { number: 12 }, 'open')] : []);
+  const readFile = async (f) => (f === 'a.md' ? 'first' : 'empty');
+  const merged = async () => ({ state: 'merged', kind: 'pull', at: null, url: 'u' });
+  assert.equal(await run(['a.md', 'b.md', '--repo', 'a/b', '--strict'], { ...base, readFile, out, extract, read: merged }), 1);
+});
+test('without --strict, a claimless second note stays exit 0', async () => {
+  const { out } = io();
+  const extract = (text) => (text === 'first' ? [c(3, { number: 12 }, 'open')] : []);
+  const readFile = async (f) => (f === 'a.md' ? 'first' : 'empty');
+  assert.equal(await run(['a.md', 'b.md', '--repo', 'a/b'], { ...base, readFile, out, extract, read: open }), 0);
+});

@@ -5,7 +5,7 @@ import { readState, resolveRef } from './github.mjs';
 
 const USAGE = 'usage: still-true NOTE.md [more.md] [--repo owner/name] [--alias Name=owner/name] [--json] [--strict]';
 const JSON_HELP = '--json: print one JSON object (schema 1) with completeness, counts and every extracted claim.';
-const STRICT_HELP = '--strict: exit 3 if nothing was verified, or if any claim could not be checked. Use it when a green run has to mean the note was really read.';
+const STRICT_HELP = '--strict: exit 3 if any note had no claim to verify, or if any claim could not be checked. Use it when a green run has to mean the note was really read.';
 const EXIT_HELP = 'exit 0: nothing contradicted, look lines may have printed\nexit 1: at least one contradiction\nexit 2: bad usage, or an unreadable file or failed read before any contradiction; the run is not complete\nexit 3: with --strict only, nothing was verified or a claim was not checked';
 
 export function repoFromRemote(url) {
@@ -63,6 +63,7 @@ export async function run(argv, deps) {
   if (!args.files.length) { print(USAGE); return finish(2, USAGE); }
   const seen = new Map();
   const skipped = [];
+  const unread = [];
 
   try {
     const repo = args.repo ?? (typeof defaultRepo === 'function' ? defaultRepo() : defaultRepo);
@@ -86,6 +87,7 @@ export async function run(argv, deps) {
         if (entry) entries.push(entry);
         return { claim, ref, entry };
       });
+      if (!claims.length) unread.push(file);
       skipped.push(...here.map((section) => (args.files.length > 1 ? `${file}: ${section}` : section)));
       for (const { claim, ref, entry } of claims) {
         if (!ref) {
@@ -138,8 +140,10 @@ export async function run(argv, deps) {
     return finish(contradicted ? 1 : 2, failure);
   }
   const strictFail = (extra = {}) => {
-    const why = unplaced ? `${unplaced} claim${unplaced === 1 ? '' : 's'} not checked` : 'nothing was verified';
-    print(`--strict: ${why}`);
+    const why = [];
+    if (unplaced) why.push(`${unplaced} claim${unplaced === 1 ? '' : 's'} not checked`);
+    if (unread.length) why.push(`nothing was verified in ${unread.join(', ')}`);
+    print(`--strict: ${why.join(', ')}`);
     return finish(3, null, { ...extra, strict_failed: true });
   };
   if (!checked && !unplaced) {
@@ -151,7 +155,7 @@ export async function run(argv, deps) {
   const note = (looks ? `, ${looks} to look at` : '') + (unplaced ? `, ${unplaced} not checked` : '');
   print(`${checked} claim${checked === 1 ? '' : 's'} checked, ${contradicted} contradicted${note}`);
   if (contradicted) return finish(1);
-  return args.strict && unplaced ? strictFail() : finish(0);
+  return args.strict && (unplaced || unread.length) ? strictFail() : finish(0);
 }
 
 export { readState };
