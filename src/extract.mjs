@@ -3,7 +3,7 @@ const TOKEN = '[a-z0-9_./-]*#[a-z0-9_.-]+';
 // Existence needs only the suffix: searching TOKEN retries every possible repo prefix.
 const HAS_REF = /#[a-z0-9_.-]+/i;
 const SUBJECT = new RegExp(`^((?:[^#]*\\s)?)(${TOKEN}(?:\\s+and\\s+${TOKEN})*)(.*)$`, 'i');
-const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|already|was(?=\s+merged\b)|(?:PR|issue)(?:\s+is)?)\s+)?(open|merged|closed)\b(?!-)(.*)$/i;
+const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|already|was(?=\s+merged\b)|(?:PR|issue)(?:\s+is)?)\s+)?(?:squash-(?=merged\b))?(open|merged|closed)\b(?!-)(.*)$/i;
 const BEFORE_REF = new RegExp(`(?<![\\w-])\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
 const COUNT_STATE = /^\d+\s+(open|merged|closed)$/i;
 const WAIT = new RegExp(`(?:^|\\s)(?:waits?|waiting)\\s+(?:on|for)\\s+(${TOKEN}|(?:its|the) maintainer)(?:\\s+(?:to merge|for a response|and\\s+(?:a|an|the|its)\\s+(?!.*\\b(?:is|are|was|were)\\b)[\\w -]+))?$`, 'i');
@@ -19,7 +19,7 @@ const PLANNED = /\b(?:plans?|planned|planning|proposed|intended|expected|ideas?|
 const CURRENT_HEADING = /^(?:handoff|state|status|now|current)\b(?!-)/i;
 const PREAMBLE = /^(?:if|unless|once|after|when|until|yesterday|old note|example|suppose|imagine)\b/i;
 const UNCERTAIN = /\b(?:probably|maybe|might|should|could|would|if|unless|when|until|need|get|think|believe|locally|re-?opened)\b|\bonce\s+(?!at\b)\S|n['’]t\b|\bby\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|next)\b/i;
-const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|already)\s+)?(?:open|merged|closed)|(?:was|were|used to be)\s+(?:(?:still|currently|already)\s+)?(?:open|closed)|(?:open|merged|closed)\s+or\s+(?:open|merged|closed))\b/i;
+const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|already)\s+)?(?:open|(?:squash-)?merged|closed)|(?:was|were|used to be)\s+(?:(?:still|currently|already)\s+)?(?:open|closed)|(?:open|(?:squash-)?merged|closed)\s+or\s+(?:open|(?:squash-)?merged|closed))\b/i;
 // The writer takes the claim back on the same line: "#12 is open (no longer true)".
 // Only a field that is nothing but the retraction counts, so "(fixes outdated documentation)" keeps its claim.
 const RETRACTION = /^(?:(?:no\s+longer|not)\s+(?:true|the\s+case|accurate|current)|outdated|wrong|incorrect)$/i;
@@ -123,8 +123,9 @@ const LATER_STEP_ONCE = /,\s*[^,]*?\S\s+once\s[^,]*/g;
 const laterStep = (field) => (field.includes('#') || /\b(?:only|just|not|except|unless)\b/i.test(field) ? field : field.replace(/\bonce\b/i, ''));
 
 function claimsFromClause(quote, line) {
-  const body = unquoted(quote);
-  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body)) return [];
+  // A leading inline link supplies its label to the subject grammar, never its destination.
+  const body = unquoted(quote).replace(/^\[([^\[\]]+)\]\([^()\s]+\)(?=\s)/, '$1');
+  if (!body.includes('#') || body.includes('?') || PREAMBLE.test(body) || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body)) return [];
   const claims = [];
   const retracted = new Set();
   // Inherited parenthetical facts share a group; independent subjects own theirs.
