@@ -2,21 +2,20 @@
 
 ## Capture comparison
 
-Evidence: `test/fixtures/real/accm-142-6110674012/note.md:1,3,5`
-and `CAPTURE.md:4,7-18` in the same directory. The local note's SHA-256 is
-`17ad54b95117c71b77d22f7c222f0cd8bd2ec313a3cf4ef27c7d99c1746b9071`,
-matching the capture's abbreviated checksum. Neither fixture file was edited.
+Evidence: `test/fixtures/real-shape/squash-note/note.md:1,3,5`
+and `CAPTURE.md:1-7` in the same directory. The fixture uses our own words and
+the fictional repository `owner/example`, preserving the shape of a real
+maintainer comment seen 2026-11-08. The leading link names #217 on line 1,
+the bare #218 reference is on line 3, and "The PR" is in a later paragraph
+on line 5.
 
-The capture reports #217 merged at 15:30:16Z, before the note at 15:36:56Z.
-Its line 1 merge claim is true. The line 5 draft/unmerged claim refers to #218
-according to the capture; #218 merged at 17:02:46Z, 85 minutes 50 seconds after
-the note. That claim was stale at capture time. The captured tool read zero
-claims and exited 0; it verified neither statement. These are supplied captured
-facts, not a new live GitHub verification.
+The live result before the fix was zero claims, two unread references, exit 0.
+Rick's live replay on 2026-11-08 checked one claim, contradicted zero,
+and left #218 unread, exit 0. CAPTURE.md records those supplied results;
+the rewritten fixture is not a verbatim capture or a new live verification.
 
-A local replay used the real CLI, reader and unchanged note, replacing only
-the reader's transport with the captured #217 state. With the saved original
-extractor: zero requests, both references unread, exit 0. With the fix:
+The regression uses the real CLI and reader with a simulated merged #217
+response at the transport boundary. With the fix:
 
     note.md:3  no claim read: #218
     1 claim checked, 0 contradicted, 1 reference with no claim read
@@ -24,9 +23,9 @@ extractor: zero requests, both references unread, exit 0. With the fix:
 Exit 0, exactly one request to the issues endpoint for #217. The new regression
 `test/squash-merged.test.mjs:76` asserts this text and the full JSON result,
 including the line 3 unread #218 and the absence of a second request.
-This fixes gap (a); it does not detect the stale #218 claim.
+This fixes gap (a); it does not attach the later draft claim to #218.
 
-## Implementation and checks
+## Implementation and checks from the original fix
 
 Only `src/extract.mjs` changed in the implementation. STATE accepts squash-
 before merged while still capturing the canonical merged state. NONSTATE keeps
@@ -37,7 +36,7 @@ not become a current claim. Quotes retain the original text and source line.
 README and CHANGELOG describe the accepted form and its limits; CLI help does
 not enumerate individual grammatical forms and needs no change.
 
-Commands run with Node v22.23.4 and npm 10.9.9:
+Original fix commands run with Node v22.23.4 and npm 10.9.9:
 
 | Command | Result |
 | --- | --- |
@@ -58,8 +57,8 @@ or live GitHub requests were performed. Only Node 22 was exercised.
 
 ## Gap (b) and four questions
 
-Do not tie "The PR" to #218 automatically. The capture identifies its intended
-subject, but proximity across paragraphs is not a general ownership rule: the
+Do not tie "The PR" to #218 automatically. The original report identified its
+intended subject, but proximity across paragraphs is not a general ownership rule: the
 note also names #217, and ordinary prose can change subject without naming a
 reference. A false attachment would break `01-context/purpose.md`'s preference
 for silence over false alarms. No subject-resolution behavior was built.
@@ -73,8 +72,8 @@ for silence over false alarms. No subject-resolution behavior was built.
   `04-memory/review-newcomer/checks.mjs` passed for text and JSON: no disk
   changes or success summary. Those interruption probes use waiting claims,
   not the new squash wording; no new cancellation behavior is claimed.
-- Real system differs: the exact captured Markdown is exercised through the
-  real parser, CLI and reader. Transport supplies the captured closed plus
+- Real system differs: the rewritten Markdown is exercised through the
+  real parser, CLI and reader. Transport supplies a simulated closed plus
   pull_request.merged_at shape, not a precomputed merged verdict. An open-PR
   control yields one contradiction, exit 1 (`test/squash-merged.test.mjs:95`).
   Live API/proxy behavior and Node 20 remain unverified by this job.
@@ -88,7 +87,5 @@ No CONTRIBUTING, lint/type/format config or CI workflow was found. Checked
 subject ownership, retractions/qualifiers, regex state, package contents,
 CLI/library parity and the added public wording. No additional finding.
 
-Before shipping: review the small src diff, replay the capture through live
-GitHub, and reword or remove the private third-party fixture together with its
-test dependency, as requested on the board. This report does not authorize
-publishing that fixture.
+Before shipping: review the own-words fixture and its capture attribution.
+Rick supplied the live replay result above; this job made no live API requests.

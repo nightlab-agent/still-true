@@ -5,11 +5,11 @@ import { extractClaims } from '../src/extract.mjs';
 import { run } from '../src/cli.mjs';
 import { readState } from '../src/github.mjs';
 
-const repo = 'karanb192/awesome-claude-code-mods';
+const repo = 'owner/example';
 const url = `https://github.com/${repo}/pull/217`;
 const forms = [
   '#217 is squash-merged',
-  `[Search PR #217](${url}) is squash-merged as \`174984c\`.`,
+  `[Index PR #217](${url}) is squash-merged as \`c0ffee1\`.`,
 ];
 
 for (const form of forms) test(`squash merge claim: ${form}`, () => {
@@ -19,7 +19,7 @@ for (const form of forms) test(`squash merge claim: ${form}`, () => {
 });
 
 test('a leading subject link also accepts a simple link destination', () => {
-  const form = '[Search PR #217](url) is squash-merged as `174984c`.';
+  const form = '[Index PR #217](url) is squash-merged as `c0ffee1`.';
   assert.deepEqual(extractClaims(form), [{
     line: 1, ref: { number: 217 }, said: 'merged', quote: form,
   }]);
@@ -73,8 +73,8 @@ const invoke = async (text, state = 'merged', json = true) => {
   return { code, output: output.join('\n'), requests };
 };
 
-test('captured note checks the true search merge and leaves the distant draft claim unread', async () => {
-  const note = await readFile(new URL('./fixtures/real/accm-142-6110674012/note.md', import.meta.url), 'utf8');
+test('shape-preserving note checks the merge and leaves the distant draft claim unread', async () => {
+  const note = await readFile(new URL('./fixtures/real-shape/squash-note/note.md', import.meta.url), 'utf8');
   const result = await invoke(note);
   assert.equal(result.code, 0);
   assert.deepEqual(result.requests, [`https://api.github.com/repos/${repo}/issues/217`]);
