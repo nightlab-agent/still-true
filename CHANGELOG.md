@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Retraction fields preserve independent claims sharing their clause: `#12 is open; no longer true, #13 is merged` retracts #12 and checks #13. Comma and parenthesis retractions apply to their current subject; a semicolon retraction outside parentheses still takes back every claim in the preceding clause. Retracted references remain under `no claim read`; surviving claims determine contradictions and whether anything was verified for `--strict`.
+- Complete single-line claims survive unrelated adjacent prose: `Notes from today.` immediately before or after `#12 open` no longer hides #12. Source line numbers are retained. Wrapped qualifiers, retractions and Markdown scope rules stay conservative; unrelated references and incomplete wrapped claims are not promoted into claims.
 - Short repository names match `--repo` and `--alias Name=owner/name` without regard to case, preserving the configured repository spelling. Exact alias keys retain precedence; a new case-insensitive match with conflicting alias targets stays `not checked`.
 
 ## 0.5.0 - 2026-11-08

@@ -271,9 +271,13 @@ export function extractClaims(text, options = {}) {
   const claims = [], read = [];
   let paragraph = [], fence = null, quote = null, comment = false, sections = [], frontMatter = false, titled = false, planned = null;
   const flush = (keepLabel = false) => {
-    // A wrapped condition, quotation or historical preamble can change the
-    // following line. Separate list items may contain independent nonclaims.
-    const blocks = (entry) => entry && !entry.claims.length && !entry.list;
+    // Keep wrapped qualifiers and Markdown exclusions conservative, but unrelated
+    // prose does not take back an otherwise complete claim on its own line.
+    const blocks = (entry) => entry && !entry.claims.length && !entry.list &&
+      (!entry.text || entry.indent > 0 || entry.colon ||
+        PREAMBLE.test(entry.text) || PLANNED.test(entry.text) || UNCERTAIN.test(entry.text) ||
+        NONSTATE.test(entry.text) || entry.text.split(/[(),;]/).some(isRetraction) || QUALIFIED_STATE.test(` ${entry.text}`) ||
+        /^(?:and|but|not|never|no\s+longer)\b|\?/i.test(entry.text));
     // A historical label ("Old note:") covers the whole list under it.
     const old = paragraph.findIndex((entry) => !entry.list && !entry.claims.length && entry.label);
     paragraph.forEach((entry, i) => {
@@ -383,7 +387,7 @@ export function extractClaims(text, options = {}) {
       const parent = item && colon && PLANNED.test(bare);
       // A list item that opens a current list does not silence its first child.
       const list = item && (!colon || CURRENT_HEADING.test(bare));
-      paragraph.push({ claims, list, item, label, parent, text: raw.trim(), indent: /^\s*/.exec(raw)[0].length });
+      paragraph.push({ claims, list, item, label, parent, colon, text: raw.trim(), indent: /^\s*/.exec(raw)[0].length });
     }
   }
   flush();
