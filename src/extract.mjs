@@ -1,6 +1,7 @@
 // State and wait grammar, shared by bare statements, labelled lists and fact fields.
 const TOKEN = '[a-z0-9_./-]*#[a-z0-9_.-]+';
-const HAS_REF = new RegExp(TOKEN, 'i');
+// Existence needs only the suffix: searching TOKEN retries every possible repo prefix.
+const HAS_REF = /#[a-z0-9_.-]+/i;
 const SUBJECT = new RegExp(`^((?:[^#]*\\s)?)(${TOKEN}(?:\\s+and\\s+${TOKEN})*)(.*)$`, 'i');
 const STATE = /^(?:(?:is(?:\s+(?:still|currently|now))?|remains|still|currently|already|was(?=\s+merged\b)|(?:PR|issue)(?:\s+is)?)\s+)?(open|merged|closed)\b(?!-)(.*)$/i;
 const BEFORE_REF = new RegExp(`(?<![\\w-])\\b(open|merged|closed)\\s+((?:PR|issue|pull request)\\s+)?(${TOKEN})(.*)$`, 'i');
