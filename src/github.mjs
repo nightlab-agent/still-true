@@ -3,9 +3,18 @@ const API = 'https://api.github.com';
 
 export function resolveRef(ref, { defaultRepo, aliases = {} } = {}) {
   if (ref.owner) return ref;
-  const full = ref.repo
-    ? (Object.hasOwn(aliases, ref.repo) ? aliases[ref.repo] : null) ?? (defaultRepo?.split('/')[1] === ref.repo ? defaultRepo : null)
-    : defaultRepo;
+  let full = defaultRepo;
+  if (ref.repo) {
+    const short = ref.repo.toLowerCase();
+    if (Object.hasOwn(aliases, ref.repo)) full = aliases[ref.repo];
+    else {
+      const matches = Object.entries(aliases).filter(([name]) => name.toLowerCase() === short);
+      full = matches[0]?.[1];
+      // A new spelling must not choose between aliases for different repositories.
+      if (matches.some(([, target]) => target.toLowerCase() !== full.toLowerCase())) return null;
+    }
+    full ??= defaultRepo?.split('/')[1]?.toLowerCase() === short ? defaultRepo : null;
+  }
   if (!full) return null;
   const [owner, repo] = full.split('/');
   return { owner, repo, number: ref.number };

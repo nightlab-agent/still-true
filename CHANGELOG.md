@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Short repository names match `--repo` and `--alias Name=owner/name` without regard to case, preserving the configured repository spelling. Exact alias keys retain precedence; a new case-insensitive match with conflicting alias targets stays `not checked`.
+
 ## 0.5.0 - 2026-11-08
 
 - A leading `only` can start a statement about a reference's state: `only owner/repo#12 (merged 11-07, known)` now reads one merged claim. Unrelated prefixes such as `see only` still give no claim.

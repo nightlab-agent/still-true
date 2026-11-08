@@ -29,6 +29,8 @@ The real miss behind it: an agent's handoff went on counting 5 open pull request
 
 Give it one or more Markdown files. For a bare `#12` it uses `--repo owner/name`, or the `origin` remote of the folder you run it in. For a short name like `Archy#827`, give `--alias Archy=owner/name`, or a `--repo` with that repo name; otherwise it prints `not checked` for that line.
 
+Short names match the default repository or an alias without regard to case; the resolved repository keeps the configured spelling. An exact alias key takes precedence; otherwise, case-variant alias keys pointing to different repositories leave the reference `not checked`.
+
 Set `GITHUB_TOKEN` for private repositories and a higher rate limit. Without one, GitHub allows 60 requests an hour. Needs Node 20 or newer, tested on 20 and 22. Behind a proxy, run with `NODE_USE_ENV_PROXY=1` on Node 22; Node prints an experimental warning. Node 20 does not read that setting, and the run stops with `fetch failed`.
 
 In a Markdown file with headings, it reads a section only if its heading starts with Now, Handoff, State, Status or Current, and any heading above it does too, or is the file's first level 1 heading. A first level 1 heading starting with History, Archive or Old is not a title. Plans and history stay out. Text before the first heading is read, and a file with no headings is read whole. If it finds no claims, it names the sections it skipped.
