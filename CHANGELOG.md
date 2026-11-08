@@ -3,7 +3,7 @@
 ## 0.4.0 - 2026-11-08
 
 - New line, `no claim read`: a reference on a line it read that gave no claim is listed with its line, and counted in the summary. A green run on a real note had read 4 of 9 references and said nothing of the other 5. `--json` adds `unread_references`. No exit code changes.
-- A claim the same line takes back is no longer read as a claim: `#12 is open (no longer true)` gives nothing to check. Only a field that is nothing but the retraction counts, so `#12 is open (fixes outdated documentation)` keeps its claim.
+- A claim taken back in parentheses on the same line is no longer read as a claim: `#12 is open (no longer true)` gives nothing to check. A retraction after a semicolon, `#12 is open; no longer true`, is not read yet and still checks the claim. Only a field that is nothing but the retraction counts, so `#12 is open (fixes outdated documentation)` keeps its claim.
 
 ## 0.3.0 - 2026-11-07
 
