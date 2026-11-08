@@ -30,7 +30,7 @@ const invoke = async (text, json = true) => {
   return { code, output: output.join('\n'), reads };
 };
 
-// s649's three reported forms and the already-readable bare-reference control.
+// The three handoff-note forms reported on 2026-11-08 and the already-readable bare-reference control.
 for (const form of forms) test(`handoff merge fact: ${form}`, async () => {
   const note = `## Now\n\n${form}\n`;
   const result = await invoke(note);

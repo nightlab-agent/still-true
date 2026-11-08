@@ -23,8 +23,8 @@ const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|alrea
 // Only a field that is nothing but the retraction counts, so "(fixes outdated documentation)" keeps its claim.
 const RETRACTION = /^(?:(?:no\s+longer|not)\s+(?:true|the\s+case|accurate|current)|outdated|wrong|incorrect)$/i;
 const RETRACT_FILLER = /\b(?:which|that|this|it|is|was|now|anymore|any\s+more|see\s+below)\b/gi;
-const RETRACTED = { test: (body) => body.split(/[(),;]/).some((field) =>
-  RETRACTION.test(field.replace(RETRACT_FILLER, ' ').replace(/[.!]/g, ' ').replace(/\s+/g, ' ').trim())) };
+const isRetraction = (field) => RETRACTION.test(field.replace(RETRACT_FILLER, ' ').replace(/[.!]/g, ' ').replace(/\s+/g, ' ').trim());
+const RETRACTED = { test: (body) => body.split(/[(),;]/).some(isRetraction) };
 const NOT_WAITING = /\b(?:(?:not|never|no\s+longer|no\s+more|stop(?:s|ped)?|done|finished|quit|gave\s+up|nothing(?:\s+is)?|without|instead\s+of)\s+(?:(?:yet|still|currently|really)\s+)?(?:waits?|waiting)|(?:n['’]t)\s+(?:waits?|waiting))\b/i;
 const QUALIFIED_STATE = /^\s+(?:to|into|for|or|after)\b/i;
 // A later comma field must look like a state fact, not "open question".
@@ -52,6 +52,12 @@ function endQuote(raw, quote) {
 
 function clauses(raw) {
   const result = [];
+  let afterSemicolon = false;
+  const add = (clause) => {
+    // Keep a standalone semicolon retraction with the clause it takes back.
+    if (afterSemicolon && isRetraction(unquoted(clause))) result[result.length - 1] += `; ${clause}`;
+    else result.push(clause);
+  };
   let start = 0, quote = null, code = null, depth = 0;
   for (let i = 0; i < raw.length; i++) {
     const char = raw[i];
@@ -68,11 +74,12 @@ function clauses(raw) {
     if (char === '(') depth++;
     if (char === ')') depth--;
     if (depth === 0 && (char === ';' || (/[.!?]/.test(char) && /\s|^$/.test(raw[i + 1] ?? '')))) {
-      result.push(raw.slice(start, char === ';' ? i : i + 1).trim());
+      add(raw.slice(start, char === ';' ? i : i + 1).trim());
+      afterSemicolon = char === ';';
       start = i + 1;
     }
   }
-  result.push(raw.slice(start).trim());
+  add(raw.slice(start).trim());
   return result.filter(Boolean);
 }
 
