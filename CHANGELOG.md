@@ -2,8 +2,8 @@
 
 ## 0.5.0 - 2026-11-08
 
-- A leading `only` can name a state fact's subject: `only owner/repo#12 (merged 11-07, known)` now reads one merged claim. Unrelated prefixes such as `see only` still give no claim.
-- A standalone retraction immediately after a semicolon now takes back the preceding clause on the same line: `#12 is open; no longer true` gives no claim. It uses the existing parenthesis/comma retraction wording, including `not true`, `outdated`, `wrong` and `incorrect`. Extra prose, quotations and inline code do not qualify; independent clauses on other references remain checked. Existing parenthesis and comma behavior is unchanged. A retracted-only note still exits `3` with `--strict` (nothing verified), or `0` without it, and lists the reference as `no claim read`.
+- A leading `only` can start a statement about a reference's state: `only owner/repo#12 (merged 11-07, known)` now reads one merged claim. Unrelated prefixes such as `see only` still give no claim.
+- A standalone retraction immediately after a semicolon now takes back the preceding clause on the same line: `#12 is open; no longer true` gives no claim. It uses the existing parenthesis/comma retraction wording, including `not true`, `outdated`, `wrong` and `incorrect`. Extra prose, quotations and inline code do not qualify; a claim in its own clause, after another semicolon or sentence end, remains checked. Existing parenthesis and comma behavior is unchanged. A retracted-only note still exits `3` with `--strict` (nothing verified), or `0` without it, and lists the reference as `no claim read`.
 
 ## 0.4.0 - 2026-11-08
 
