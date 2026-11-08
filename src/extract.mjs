@@ -25,7 +25,6 @@ const NONSTATE = /\b(?:(?:not|never|no longer)\s+(?:(?:yet|still|currently|alrea
 const RETRACTION = /^(?:(?:no\s+longer|not)\s+(?:true|the\s+case|accurate|current)|outdated|wrong|incorrect)$/i;
 const RETRACT_FILLER = /\b(?:which|that|this|it|is|was|now|anymore|any\s+more|see\s+below)\b/gi;
 const isRetraction = (field) => RETRACTION.test(field.replace(RETRACT_FILLER, ' ').replace(/[.!]/g, ' ').replace(/\s+/g, ' ').trim());
-const RETRACTED = { test: (body) => body.split(/[(),;]/).some(isRetraction) };
 const NOT_WAITING = /\b(?:(?:not|never|no\s+longer|no\s+more|stop(?:s|ped)?|done|finished|quit|gave\s+up|nothing(?:\s+is)?|without|instead\s+of)\s+(?:(?:yet|still|currently|really)\s+)?(?:waits?|waiting)|(?:n['’]t)\s+(?:waits?|waiting))\b/i;
 const QUALIFIED_STATE = /^\s+(?:to|into|for|or|after)\b/i;
 // A later comma field must look like a state fact, not "open question".
@@ -55,9 +54,13 @@ function clauses(raw) {
   const result = [];
   let afterSemicolon = false;
   const add = (clause) => {
-    // Keep a standalone semicolon retraction with the clause it takes back.
-    if (afterSemicolon && isRetraction(unquoted(clause))) result[result.length - 1] += `; ${clause}`;
-    else result.push(clause);
+    // A leading retraction field takes back the preceding clause, including
+    // all its comma-separated claims. Later fields may name independent work.
+    const first = afterSemicolon ? /^([^(),]*)(?:,|$)/.exec(unquoted(clause)) : null;
+    if (afterSemicolon && first && isRetraction(first[1])) {
+      if (result.length) result[result.length - 1].retracted = true;
+      result.push({ quote: clause.slice(first[0].length).trim(), retracted: false });
+    } else result.push({ quote: clause, retracted: false });
   };
   let start = 0, quote = null, code = null, depth = 0;
   for (let i = 0; i < raw.length; i++) {
@@ -81,7 +84,7 @@ function clauses(raw) {
     }
   }
   add(raw.slice(start).trim());
-  return result.filter(Boolean);
+  return result.filter((clause) => clause.quote);
 }
 
 function makeClaim(token, said, quote, line) {
@@ -121,24 +124,42 @@ const laterStep = (field) => (field.includes('#') || /\b(?:only|just|not|except|
 
 function claimsFromClause(quote, line) {
   const body = unquoted(quote);
-  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body) || RETRACTED.test(body)) return [];
+  if (!body.includes('#') || body.includes('?') || UNCERTAIN.test(body.replace(LATER_STEP_ONCE, laterStep)) || NONSTATE.test(body)) return [];
   const claims = [];
+  const retracted = new Set();
+  // Inherited parenthetical facts share a group; independent subjects own theirs.
+  let context = { subjects: [], list: false, label: false, state: null, hadRef: false,
+    group: { claims: [], retracted: false } };
   const add = (tokens, said) => {
+    if (context.group.retracted) return;
     for (const token of tokens) {
       const claim = makeClaim(token, said, quote, line);
-      if (claim && !claims.some((c) => c.said === claim.said &&
-        c.ref.owner === claim.ref.owner && c.ref.repo === claim.ref.repo && c.ref.number === claim.ref.number)) claims.push(claim);
+      if (!claim) continue;
+      const existing = claims.find((c) => !retracted.has(c) && c.said === claim.said &&
+        c.ref.owner === claim.ref.owner && c.ref.repo === claim.ref.repo && c.ref.number === claim.ref.number);
+      if (!existing) claims.push(claim);
+      context.group.claims.push(existing ?? claim);
     }
   };
   const labelled = LABEL_LIST.exec(body.trim().replace(/[.!]$/, ''));
   if (labelled) add([...labelled[2].matchAll(new RegExp(TOKEN, 'gi'))].map((m) => m[0]), labelled[1]);
-  let context = { subjects: [], list: false, label: false, state: null, hadRef: false };
   const stack = [];
   let afterComma = false;
   // Commas separate fact fields; parentheses save and restore subject scope.
-  for (const field of body.matchAll(/([^(),:]*)([(),:]|$)/g)) {
+  // A semicolon inside parentheses can bound a retraction field too. Keep the
+  // existing fact grammar for such semicolons when there is no retraction.
+  const fields = body.includes(';') && body.split(/[(),;]/).some(isRetraction)
+    ? /([^(),:;]*)([(),:;]|$)/g : /([^(),:]*)([(),:]|$)/g;
+  for (const field of body.matchAll(fields)) {
     const text = field[1].trim().replace(/[.!]$/, '');
     const delimiter = field[2];
+    if (delimiter !== ':' && body[field.index - 1] !== ':' && isRetraction(text)) {
+      for (const claim of context.group.claims) retracted.add(claim);
+      context.group.retracted = true;
+      context.subjects = [];
+      context.list = false;
+      context.state = null;
+    }
     const bareState = STATE.exec(text);
     const subject = bareState ? null : SUBJECT.exec(text);
     let tail = text;
@@ -148,6 +169,7 @@ function claimsFromClause(quote, line) {
       const tokens = subject[2].split(/\s+and\s+/i);
       if (SUBJECT_PREFIX.test(prefix) && !OBJECT_PREFIX.test(prefix) &&
           (tokens.length === 1 || context.label || context.state)) {
+        if (!context.list && !(context.state && !subject[3].trim())) context.group = { claims: [], retracted: false };
         context.subjects = context.list ? [...context.subjects, ...tokens] : tokens;
         tail = subject[3].trim();
         context.list = !tail && (context.label || stack.length > 0 || context.state !== null);
@@ -160,18 +182,22 @@ function claimsFromClause(quote, line) {
     // An issue title within a parenthetical fact may sit between REF and STATE.
     const statusText = subject && stack.length ? tail.replace(/^(?:[A-Z][\w-]*\s+)+(?=(?:open|merged|closed)\b)/, '') : tail;
     const state = bareState ?? STATE.exec(statusText);
+    const waiting = WAIT.exec(tail);
+    const before = BEFORE_REF.exec(text);
+    const beforeSubject = before && (!subject || before.index < subject[1].length) &&
+      (before[1].toLowerCase() !== 'open' || (before[2] &&
+        (OPEN_POSSESSIVE.test(text.slice(0, before.index)) || OPEN_PREDICATE.test(before[4])))) &&
+      !QUALIFIED_STATE.test(before[4]);
+    if (beforeSubject || (waiting && !NOT_WAITING.test(text) && REF.test(waiting[1]) && !context.subjects.length)) {
+      context.group = { claims: [], retracted: false };
+    }
     if (state && !QUALIFIED_STATE.test(state[2]) &&
         (!bareState || !afterComma || COMMA_STATE_TAIL.test(state[2]))) {
       add(context.subjects, state[1]);
       context.list = false;
     }
-    const waiting = WAIT.exec(tail);
     if (waiting && !NOT_WAITING.test(text)) add(REF.test(waiting[1]) ? [waiting[1]] : context.subjects, 'waiting');
-    const before = BEFORE_REF.exec(text);
-    if (before && (!subject || before.index < subject[1].length) &&
-        (before[1].toLowerCase() !== 'open' || (before[2] &&
-          (OPEN_POSSESSIVE.test(text.slice(0, before.index)) || OPEN_PREDICATE.test(before[4])))) &&
-        !QUALIFIED_STATE.test(before[4])) add([before[3]], before[1]);
+    if (beforeSubject) add([before[3]], before[1]);
     // A second ref in the predicate may be an object, not the next subject.
     if (subject && HAS_REF.test(tail)) {
       context.subjects = [];
@@ -182,12 +208,13 @@ function claimsFromClause(quote, line) {
       const count = COUNT_STATE.exec(text);
       stack.push(context);
       context = { subjects: [...context.subjects], list: false, label: context.label,
-        state: count ? count[1] : null, hadRef: false };
+        state: count ? count[1] : null, hadRef: false, group: context.group };
     } else if (delimiter === ')' && stack.length) {
       const child = context;
       context = stack.pop();
       // A ref inside parentheses interrupts the inherited subject's fact chain.
       if (child.hadRef) { context.subjects = []; context.list = false; context.hadRef = true; }
+      if (context.group.retracted) { context.subjects = []; context.list = false; context.state = null; }
     }
     afterComma = delimiter === ',';
   }
@@ -200,7 +227,7 @@ function claimsFromClause(quote, line) {
     if ((!rest || wait?.index === 0) && claim && !claims.some((c) =>
       c.ref.owner === claim.ref.owner && c.ref.repo === claim.ref.repo && c.ref.number === claim.ref.number)) claims.unshift(claim);
   }
-  return claims;
+  return claims.filter((claim) => !retracted.has(claim));
 }
 
 function claimsFromLine(raw, line) {
@@ -208,8 +235,8 @@ function claimsFromLine(raw, line) {
   const body = raw.trim().replace(/^(?:[-+*]|[0-9]+[.)])\s+/, '');
   const claims = [];
   for (const clause of clauses(body)) {
-    if (PREAMBLE.test(clause)) break;
-    claims.push(...claimsFromClause(clause, line));
+    if (PREAMBLE.test(clause.quote)) break;
+    if (!clause.retracted) claims.push(...claimsFromClause(clause.quote, line));
   }
   return claims;
 }

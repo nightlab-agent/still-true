@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Retraction fields preserve independent claims sharing their clause: `#12 is open; no longer true, #13 is merged` retracts #12 and checks #13. Comma and parenthesis retractions apply to their current subject; a semicolon retraction outside parentheses still takes back every claim in the preceding clause. Retracted references remain under `no claim read`; surviving claims determine contradictions and whether anything was verified for `--strict`.
 - Short repository names match `--repo` and `--alias Name=owner/name` without regard to case, preserving the configured repository spelling. Exact alias keys retain precedence; a new case-insensitive match with conflicting alias targets stays `not checked`.
 
 ## 0.5.0 - 2026-11-08
