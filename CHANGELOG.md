@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A leading `only` can name a state fact's subject: `only owner/repo#12 (merged 11-07, known)` now reads one merged claim. Unrelated prefixes such as `see only` still give no claim. The semicolon-retraction limitation in 0.4.0 remains.
+
 ## 0.4.0 - 2026-11-08
 
 - New line, `no claim read`: a reference on a line it read that gave no claim is listed with its line, and counted in the summary. A green run on a real note had read 4 of 9 references and said nothing of the other 5. `--json` adds `unread_references`. No exit code changes.

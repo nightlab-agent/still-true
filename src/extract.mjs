@@ -32,9 +32,9 @@ const COMMA_STATE_TAIL = /^(?:$|\s+(?:\d|today\b|yesterday\b|last\b|since\b|by\b
 // An initial "open PR" needs a predicate to distinguish it from a command.
 const OPEN_PREDICATE = /^\s+(?:is|has|needs|touches)\b/i;
 const OPEN_POSSESSIVE = /(?:['’]s|\b(?:my|our|your|their|his|her|its))\s*$/i;
-// Subjects may have a noun label or a possessive determiner, but objects of
+// Subjects may have "only", a noun label or a possessive determiner, but objects of
 // phrases such as "a PR for issue #12" are not the subject of that PR's state.
-const SUBJECT_PREFIX = /^(?:(?:PR|issue|pull request)|(?:[\w'-]+\s+)+(?:PR|issue|pull request)|(?:the\s+)?[\w-]+['’]s|(?:my|our|your|their|his|her|its)(?:\s+own)?)?$/i;
+const SUBJECT_PREFIX = /^(?:only|(?:PR|issue|pull request)|(?:[\w'-]+\s+)+(?:PR|issue|pull request)|(?:the\s+)?[\w-]+['’]s|(?:my|our|your|their|his|her|its)(?:\s+own)?)?$/i;
 const OBJECT_PREFIX = /\b(?:for|of|on|about|after)\b/i;
 
 function nextQuote(raw, i, quote) {
