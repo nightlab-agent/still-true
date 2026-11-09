@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 - 2026-11-09
 
 - `#12 is squash-merged` reads as merged. A leading inline Markdown link uses its label as the subject, so ``[Search PR #12](url) is squash-merged as `abcdef0`.`` also reads one merged claim. The destination does not select the repository. Qualifiers and retractions remain conservative; a later "The PR" is not tied to an earlier reference.
 - A retraction no longer hides a separate claim written after it in the same clause: `#12 is open; no longer true, #13 is merged` retracts #12 and checks #13. Comma and parenthesis retractions apply to their current subject; a semicolon retraction outside parentheses still takes back every claim in the preceding clause. Retracted references remain under `no claim read`; surviving claims determine contradictions and whether anything was verified for `--strict`.
