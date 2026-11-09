@@ -3,9 +3,10 @@
 ## Unreleased
 
 - `#12 is squash-merged` reads as merged. A leading inline Markdown link uses its label as the subject, so ``[Search PR #12](url) is squash-merged as `abcdef0`.`` also reads one merged claim. The destination does not select the repository. Qualifiers and retractions remain conservative; a later "The PR" is not tied to an earlier reference.
-- Retraction fields preserve independent claims sharing their clause: `#12 is open; no longer true, #13 is merged` retracts #12 and checks #13. Comma and parenthesis retractions apply to their current subject; a semicolon retraction outside parentheses still takes back every claim in the preceding clause. Retracted references remain under `no claim read`; surviving claims determine contradictions and whether anything was verified for `--strict`.
-- Complete single-line claims survive unrelated adjacent prose: `Notes from today.` immediately before or after `#12 open` no longer hides #12. Source line numbers are retained. Wrapped qualifiers, retractions and Markdown scope rules stay conservative; unrelated references and incomplete wrapped claims are not promoted into claims.
-- Short repository names match `--repo` and `--alias Name=owner/name` without regard to case, preserving the configured repository spelling. Exact alias keys retain precedence; a new case-insensitive match with conflicting alias targets stays `not checked`.
+- A retraction no longer hides a separate claim written after it in the same clause: `#12 is open; no longer true, #13 is merged` retracts #12 and checks #13. Comma and parenthesis retractions apply to their current subject; a semicolon retraction outside parentheses still takes back every claim in the preceding clause. Retracted references remain under `no claim read`; surviving claims determine contradictions and whether anything was verified for `--strict`.
+- Complete single-line claims survive unrelated unindented prose on the next or previous line: `Notes from today.` immediately before or after `#12 open` no longer hides #12. Source line numbers are retained. Wrapped qualifiers, retractions and Markdown scope rules stay conservative; unrelated references and incomplete wrapped claims are not promoted into claims.
+- Short repository names match `--repo` and `--alias Name=owner/name` without regard to case, preserving the configured repository spelling. Exact alias keys retain precedence; a name that matches only by ignoring case, where those aliases point at different repositories, stays `not checked`.
+- Very long lines read fast: a line of about 80,000 characters took over a second in 0.5.0 and now takes tens of milliseconds.
 
 ## 0.5.0 - 2026-11-08
 

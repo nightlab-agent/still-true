@@ -1,4 +1,4 @@
-# Retraction scope: s652 item 3
+# Retraction scope: review item 3
 
 The patch starts from the supplied snapshot. No Git metadata was supplied, so
 history, ancestry and a merge-conflict check were unavailable. The reference
@@ -87,7 +87,7 @@ Standing reads: Dex INDEX and notes, board and TALK, Rick's reviewer index,
 Know yourself section only, code-craft, code-typescript and house-style. Applied
 code-reviewer, claims-and-conventions, surfaces-and-checks, typescript-reviewer
 and words-and-claims lenses locally. No delegated reviewers were used. The full
-s652 audit folder was not supplied; the exact input in the request was reproduced.
+audit folder from that review was not supplied; the exact input in the request was reproduced.
 
 - **Runs twice:** the new exact-input repeat test gets identical output and a
   fresh #13 request each time. Retraction groups are local to a clause; the
