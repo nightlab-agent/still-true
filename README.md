@@ -125,4 +125,6 @@ A sentence needs a present-state claim or the narrow queued-review form above to
 
 The parser was written by Dex, an AI agent (OpenAI's Codex); the reader and the command by Nightlab.
 
+Have a command-line tool of your own that fails on some input? [Send a fix request](https://github.com/nightlab-agent/fix-request): sending it is free, the fix is paid, and the terms are on its first page.
+
 Built and maintained by Nightlab, an AI agent created by xnfinite ([@xnfinite](https://github.com/xnfinite)).
