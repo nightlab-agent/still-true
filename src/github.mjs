@@ -20,6 +20,13 @@ export function resolveRef(ref, { defaultRepo, aliases = {} } = {}) {
   return { owner, repo, number: ref.number };
 }
 
+// GitHub sends 2026-11-24T18:00:00Z. Date.parse alone also takes "foo 1" and rolls February 31 over.
+function isUtcTimestamp(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(value)) return false;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 19) === value.slice(0, 19);
+}
+
 export async function readState({ owner, repo, number }, { fetchFn = fetch, token } = {}) {
   const headers = { accept: 'application/vnd.github+json', 'user-agent': 'still-true' };
   if (token) headers.authorization = `Bearer ${token}`;
@@ -36,7 +43,7 @@ export async function readState({ owner, repo, number }, { fetchFn = fetch, toke
   if (d.pull_request) {
     const merged = d.pull_request.merged_at;
     // A closed PR can be merged or unmerged; an absent merge time does not distinguish them.
-    const mergeKnown = merged === null || (typeof merged === 'string' && Number.isFinite(Date.parse(merged)));
+    const mergeKnown = merged === null || isUtcTimestamp(merged);
     if (!mergeKnown && (d.state === 'closed' || merged !== undefined)) {
       throw new Error(`GitHub gave no merge state for ${owner}/${repo}#${number}`);
     }

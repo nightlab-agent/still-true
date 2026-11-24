@@ -119,7 +119,7 @@ A sentence needs a present-state claim or the narrow queued-review form above to
 
 `src/github.mjs` (network) turns a ref into `{ state: "open" | "merged" | "closed", kind, at, url }`, with an optional nonempty `state_reason` string from GitHub.
 
-A closed PR needs a usable `pull_request.merged_at` timestamp or an explicit `null` (unmerged). Missing or malformed merge evidence fails the read, leaving the claim unchecked and the run incomplete.
+A closed PR needs a `pull_request.merged_at` UTC timestamp, in the form GitHub sends (`2026-11-24T18:00:00Z`), or an explicit `null` (unmerged). Missing or malformed merge evidence fails the read, leaving the claim unchecked and the run incomplete.
 
 `src/compare.mjs` decides: `said` against `state`. "closed" said of a merged PR is not a contradiction. Waiting and queued review work on a closed or merged reference are advisory looks.
 

@@ -9,14 +9,14 @@ const response = (pull_request, state = 'closed') => new Response(JSON.stringify
   state, pull_request, html_url: 'https://github.com/a/b/pull/1',
 }), { status: 200 });
 
-for (const merged of [undefined, false, 0, '', {}, [], true, 'not a timestamp']) {
+for (const merged of [undefined, false, 0, '', {}, [], true, 'not a timestamp', 'foo 1', '0', '2026-02-31T00:00:00Z', '2026-13-45T00:00:00Z', '2026-11-05']) {
   test(`a closed PR with unavailable merge evidence fails the read: ${JSON.stringify(merged)}`, async () => {
     await assert.rejects(readState(ref, { fetchFn: async () => response({ merged_at: merged }) }),
       /GitHub gave no merge state for a\/b#1/);
   });
 }
 
-for (const [merged, state] of [[null, 'closed'], ['2026-11-05T19:19:00Z', 'merged']]) {
+for (const [merged, state] of [[null, 'closed'], ['2026-11-05T19:19:00Z', 'merged'], ['2028-02-29T23:59:59.5Z', 'merged']]) {
   test(`a closed PR with explicit merge evidence still reads ${state}`, async () => {
     const result = await readState(ref, { fetchFn: async () => response({ merged_at: merged }) });
     assert.equal(result.state, state);
