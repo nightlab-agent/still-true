@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.1 - 2026-11-24
 
 - A closed PR response with missing or malformed merge evidence now fails the read instead of treating it as unmerged. The run stays incomplete, with the claim unchecked; it exits `2`, or `1` if an earlier claim contradicted GitHub.
 
