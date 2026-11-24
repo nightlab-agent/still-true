@@ -35,6 +35,11 @@ export async function readState({ owner, repo, number }, { fetchFn = fetch, toke
   const reason = typeof d.state_reason === 'string' && d.state_reason ? { state_reason: d.state_reason } : {};
   if (d.pull_request) {
     const merged = d.pull_request.merged_at;
+    // A closed PR can be merged or unmerged; an absent merge time does not distinguish them.
+    const mergeKnown = merged === null || (typeof merged === 'string' && Number.isFinite(Date.parse(merged)));
+    if (!mergeKnown && (d.state === 'closed' || merged !== undefined)) {
+      throw new Error(`GitHub gave no merge state for ${owner}/${repo}#${number}`);
+    }
     if (merged) return { state: 'merged', kind: 'pull', at: merged, url, ...reason };
     return { state: d.state, kind: 'pull', at: d.closed_at ?? d.updated_at ?? null, url, ...reason };
   }

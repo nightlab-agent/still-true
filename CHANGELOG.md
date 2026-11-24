@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A closed PR response with missing or malformed merge evidence now fails the read instead of treating it as unmerged. The run stays incomplete, with the claim unchecked; it exits `2`, or `1` if an earlier claim contradicted GitHub.
+
 ## 0.6.0 - 2026-11-09
 
 - `#12 is squash-merged` reads as merged. A leading inline Markdown link uses its label as the subject, so ``[Search PR #12](url) is squash-merged as `abcdef0`.`` also reads one merged claim. The destination does not select the repository. Qualifiers and retractions remain conservative; a later "The PR" is not tied to an earlier reference.
