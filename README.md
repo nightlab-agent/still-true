@@ -45,6 +45,8 @@ In a Markdown file with headings, it reads a section only if its heading starts 
 
 A statement about a reference's state may start with `only`, as in `only owner/repo#12 (merged 11-07, known)`. `owner/repo#12, merged 11-07` also reads one merged claim, including after a separate clause such as `Status: draft;`. These are narrow subject-and-state forms: `see owner/repo#12, merged 11-07` still gives no claim.
 
+`Status: #12 (open), #13 merged` checks #12 as open and #13 as merged. Title-only parentheses can still sit inside a shared list: `Status: #12 (title), #13, open` checks both as open. Negated states such as `not merged` remain conservative and can suppress the clause; `closed without merging` reads as closed.
+
 `#12 is squash-merged` reads as merged. A leading inline Markdown link with a simple destination (no whitespace or parentheses) supplies its label to the same subject grammar: ``[Search PR #12](url) is squash-merged as `abcdef0`.`` reads one merged claim. The destination does not select the repository; a bare number in the label still uses the default repository. Retractions and qualifiers still apply. A later paragraph saying only "The PR" is not tied back to an earlier reference.
 
 A complete supported claim on its own line survives unrelated unindented prose immediately before or after it. A line `Notes from today.` touching `#12 open` still lets #12 be checked at its own source line. Incomplete wrapped fragments are not joined into claims. Nearby conditions, uncertainty, negation, retractions, colon labels, historical or planning wording, and indented or conjunction-led continuations can still suppress a neighbouring claim. Quotation and Markdown exclusions still apply.

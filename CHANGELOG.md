@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A parenthetical state in a labelled list no longer assigns a later subject's state to earlier references. `Status: #12 (open), #13 merged` now checks two claims instead of also claiming #12 merged and raising a false contradiction when #12 is open. Title-only parentheses still preserve shared subject lists.
+
 ## 0.6.1 - 2026-11-24
 
 - A closed PR response with missing or malformed merge evidence now fails the read instead of treating it as unmerged. The run stays incomplete, with the claim unchecked; it exits `2`, or `1` if an earlier claim contradicted GitHub.
