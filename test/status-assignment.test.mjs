@@ -31,6 +31,17 @@ test('controls: title-only parentheses keep pending lists; explicit states keep 
   ]) assert.deepEqual(facts(note), expected, note);
 });
 
+test('title-only parentheses do not close a counted list', () => {
+  assert.deepEqual(facts('2 open (#12 (title), #13 open), no longer true'), []);
+  assert.deepEqual(facts('2 closed (#12 (title), #13, merged)').filter(([, said]) => said === 'merged'),
+    [[12, 'merged'], [13, 'merged']]);
+});
+
+test('a retraction after completed parenthetical states takes back its own scope', () => {
+  assert.deepEqual(facts('Status: #12 (open), #13 (open), no longer true'), [[12, 'open']]);
+  assert.deepEqual(facts('Status: #12 (open), #13 (open); no longer true'), []);
+});
+
 test('a labelled mixed-state note gives correct verdicts through the real reader and comparator', async () => {
   for (const json of [false, true]) {
     for (const firstState of ['open', 'merged']) {

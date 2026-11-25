@@ -209,12 +209,12 @@ function claimsFromClause(quote, line) {
       const count = COUNT_STATE.exec(text);
       stack.push(context);
       context = { subjects: [...context.subjects], list: false, label: context.label,
-        state: count ? count[1] : null, hadRef: false, group: context.group };
+        state: count ? count[1] : null, hadRef: false, group: context.group, start: context.group.claims.length };
     } else if (delimiter === ')' && stack.length) {
       const child = context;
       context = stack.pop();
       // An inherited fact completes the pending subject list outside parentheses too.
-      if (child.group === context.group && child.group.claims.length) context.list = false;
+      if (child.group === context.group && child.group.claims.length > child.start) context.list = false;
       // A ref inside parentheses interrupts the inherited subject's fact chain.
       if (child.hadRef) { context.subjects = []; context.list = false; context.hadRef = true; }
       if (context.group.retracted) { context.subjects = []; context.list = false; context.state = null; }
