@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.2 - 2026-11-24
 
 - A parenthetical state in a labelled list no longer assigns a later subject's state to earlier references. `Status: #12 (open), #13 merged` now checks two claims instead of also claiming #12 merged and raising a false contradiction when #12 is open. Title-only parentheses still preserve shared subject lists. A comma retraction after such a list now takes back its current subject only: `Status: #12 (open), #13 (open), no longer true` retracts #13 and still checks #12 (a semicolon retraction takes back both, as before).
 
